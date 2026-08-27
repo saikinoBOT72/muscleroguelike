@@ -27,7 +27,7 @@ function fireRelicHook(hookName, ctx){
 
 | フック | 呼び出し位置 | ctx |
 |---|---|---|
-| `onBattleStart` | `startBattle()` の最後、初回ドロー前 | `{battle}` |
+| `onBattleStart` | `startBattle()` の最後、**`startPlayerTurn()` の後**(先に呼ぶと開始時ブロックがターン開始のリセットで消える) | `{battle}` |
 | `onTurnStart` | `startPlayerTurn()` の Energy 設定後 | `{battle, turn}` |
 | `onCardCost` | コスト計算時(値を書き換える) | `{card, cost}` → `ctx.cost` を変更 |
 | `onBleedDamage` | 出血ダメージ計算時 | `{amount}` → `ctx.amount` を変更 |
@@ -79,7 +79,9 @@ function fireRelicHook(hookName, ctx){
 
 - [ ] 6種すべてを取得でき、HUD に表示される
 - [ ] `鍛錬の証`: 戦闘開始時にプレイヤーの力が 1 になり、パンチが 7 ダメージになる
-- [ ] `不屈のプレート`: 戦闘開始時ブロック 5。完全防御と併用で 7
+- [ ] `不屈のプレート`: 戦闘開始時ブロック 5(ターン1の開始リセット後に付与されること)
+- [ ] `完全防御` を場に出した後に得るブロックが +2 される(戦闘開始時ブロックは
+      完全防御を出す前なので加算されない。`gainBlock()` を通っていることの確認)
 - [ ] `加速装置`: 1ターン目のみ Energy 4、2ターン目は 3
 - [ ] `執念の記録`: 出血4 の敵が毎ターン 6 ダメージ受ける
 - [ ] `継戦の心得`: ガードが 0 コスト、鉄壁の構えが 1 コストになる

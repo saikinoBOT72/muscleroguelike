@@ -265,6 +265,27 @@ body{
 .mr-chest.open{animation:mrPop .4s ease}
 @keyframes mrPop{0%{transform:scale(.5);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1)}}
 .mr-btn b{font-weight:700}
+
+/* レリック */
+.mr-relics{cursor:pointer;display:flex;gap:3px;align-items:center}
+.mr-relics .relic{font-size:15px;line-height:1;display:inline-block;border-radius:50%}
+.mr-relics .relic.flash{animation:mrRelic .6s ease}
+@keyframes mrRelic{
+  0%{transform:scale(1);filter:none}
+  35%{transform:scale(1.5);filter:drop-shadow(0 0 8px #ffe9a0)}
+  100%{transform:scale(1);filter:none}
+}
+.mr-toast{
+  position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:300;
+  background:#232936;border:1px solid #4a5468;border-radius:10px;padding:9px 16px;
+  font-size:12.5px;text-align:center;color:var(--text);box-shadow:0 6px 20px rgba(0,0,0,.5);
+  animation:mrToast 2.6s ease forwards;pointer-events:none;
+}
+@keyframes mrToast{
+  0%{opacity:0;transform:translate(-50%,10px)}
+  10%,80%{opacity:1;transform:translate(-50%,0)}
+  100%{opacity:0;transform:translate(-50%,-6px)}
+}
 .mr-debug .t{font-size:10px;color:#c88;letter-spacing:.08em}
 </style>
 </head>
@@ -586,15 +607,57 @@ for (const e of ENEMY_LIST) ENEMIES[e.id] = e;
 
 /* --- レリック(効果の実装は Phase 7) --- */
 const RELIC_LIST = [
-{ id:'rel_training_proof',    name:'鍛錬の証',       icon:'🏅', desc:'戦闘開始時、力+1' },
-{ id:'rel_unyielding_plate',  name:'不屈のプレート', icon:'🛡', desc:'戦闘開始時、ブロック+5' },
-{ id:'rel_accelerator',       name:'加速装置',       icon:'⚡', desc:'戦闘の最初のターンのみ Energy+1' },
-{ id:'rel_grudge_record',     name:'執念の記録',     icon:'📕', desc:'出血によるダメージ+50%' },
-{ id:'rel_battle_wisdom',     name:'継戦の心得',     icon:'📜', desc:'POWERカードのコスト-1(最低0)' },
-{ id:'rel_sweat_crystal',     name:'汗の結晶',       icon:'💧', desc:'戦闘勝利時、ゴールド+10' }
+{ id:'rel_training_proof', name:'鍛錬の証', icon:'🏅', desc:'戦闘開始時、力+1',
+  onBattleStart(ctx){ ctx.battle.status.strength += 1; return '力+1'; } },
+
+{ id:'rel_unyielding_plate', name:'不屈のプレート', icon:'🛡', desc:'戦闘開始時、ブロック+5',
+  onBattleStart(ctx){ return 'ブロック+' + gainBlock(5); } },
+
+{ id:'rel_accelerator', name:'加速装置', icon:'⚡', desc:'戦闘の最初のターンのみ Energy+1',
+  onTurnStart(ctx){ if (ctx.turn !== 1) return null; ctx.battle.energy += 1; return 'Energy+1'; } },
+
+{ id:'rel_grudge_record', name:'執念の記録', icon:'📕', desc:'出血によるダメージ+50%',
+  onBleedDamage(ctx){
+    const before = ctx.amount;
+    ctx.amount = Math.floor(ctx.amount * 1.5);
+    return ctx.amount > before ? '出血 ' + before + '→' + ctx.amount : null;
+  } },
+
+{ id:'rel_battle_wisdom', name:'継戦の心得', icon:'📜', desc:'POWERカードのコスト-1(最低0)',
+  onCardCost(ctx){
+    if (ctx.card.type !== 'power') return null;
+    ctx.cost = Math.max(0, ctx.cost - 1);
+    return null;   // コスト計算は描画のたびに走るのでログは出さない
+  } },
+
+{ id:'rel_sweat_crystal', name:'汗の結晶', icon:'💧', desc:'戦闘勝利時、ゴールド+10',
+  onBattleWin(ctx){ ctx.gold += 10; return 'ゴールド+10'; } },
 ];
 const RELICS = {};
 for (const r of RELIC_LIST) RELICS[r.id] = r;
+
+/** 直近に発動したレリック(UIで光らせる用) */
+const relicFlash = {};
+
+/**
+ * 所持レリックのフックを順に呼ぶ。
+ * フックが文字列を返したらログに出し、アイコンを光らせる。
+ * ctx は書き換え可能(onCardCost の ctx.cost、onBleedDamage の ctx.amount など)。
+ */
+function fireRelicHook(hookName, ctx){
+  ctx = ctx || {};
+  if (!G.run) return ctx;
+  for (const id of G.run.relics){
+    const r = RELICS[id];
+    if (!r || !r[hookName]) continue;
+    const msg = r[hookName](ctx);
+    if (msg){
+      relicFlash[id] = Date.now();
+      if (G.battle) log('[' + r.name + '] ' + msg);
+    }
+  }
+  return ctx;
+}
 
 /* 初期から出現するレリック(残りは Phase 8 でアンロック) */
 const STARTER_RELICS = ['rel_training_proof','rel_unyielding_plate','rel_accelerator'];
@@ -880,6 +943,9 @@ function rollRelic(favorKey){
 function gainRelic(id){
   if (!id || G.run.relics.indexOf(id) >= 0) return false;
   G.run.relics.push(id);
+  relicFlash[id] = Date.now();
+  const r = RELICS[id];
+  if (typeof toast === 'function' && r) toast('レリック獲得<br><b>' + r.icon + ' ' + r.name + '</b>');
   saveGame();
   return true;
 }
@@ -933,10 +999,9 @@ function makeReward(tier){
     relicTaken: false,
   };
 }
-/** Phase 7 で汗の結晶を差し込むためのフック */
+/** 難易度倍率の適用後にレリック分を加算する */
 function fireRelicHookGold(gold){
-  // TODO(Phase 7): fireRelicHook('onBattleWin', {gold})
-  return gold;
+  return fireRelicHook('onBattleWin', { gold: gold }).gold;
 }
 
 /* --- ショップ --- */
@@ -1370,8 +1435,10 @@ function startBattle(enemyIds){
     G.run.tempEnergy = 0;
   }
   log('戦闘開始: ' + B.enemies.map(e => e.name).join(' / '));
-  // TODO(Phase 7): fireRelicHook('onBattleStart')
   startPlayerTurn();
+  // ターン開始処理(ブロックのリセット)の後に発動させる。
+  // 先に呼ぶと「戦闘開始時ブロック+5」がリセットで消えてしまう
+  fireRelicHook('onBattleStart', { battle: B });
   go('BATTLE');
 }
 
@@ -1410,7 +1477,7 @@ function startPlayerTurn(){
     syncPhase(e);
     e.intent = decideIntent(e);
   }
-  // TODO(Phase 7): fireRelicHook('onTurnStart')
+  fireRelicHook('onTurnStart', { battle: B, turn: B.turn });
 }
 
 function drawCard(n){
@@ -1447,6 +1514,7 @@ function gainBlock(v){
     for (const e of effectiveCard(p).effects) if (e.type === 'blockBonus') amount += e.value;
   }
   if (amount < 0) amount = 0;
+  amount = Math.max(0, fireRelicHook('onGainBlock', { amount: amount }).amount);
   B.block += amount;
   return amount;
 }
@@ -1513,9 +1581,8 @@ function triggerCounter(source){
 
 /* --- カード使用 --- */
 function cardCost(card){
-  let cost = card.cost;
-  // TODO(Phase 7): fireRelicHook('onCardCost')
-  return Math.max(0, cost);
+  const ctx = fireRelicHook('onCardCost', { card: card, cost: card.cost });
+  return Math.max(0, ctx.cost);
 }
 
 function livingEnemies(){ return B.enemies.filter(e => e.alive); }
@@ -1814,8 +1881,7 @@ function finishEnemyTurn(){
   // ターン終了時: 出血
   for (const e of livingEnemies()){
     if (e.status.bleed > 0){
-      let amount = e.status.bleed;
-      // TODO(Phase 7): fireRelicHook('onBleedDamage')
+      const amount = fireRelicHook('onBleedDamage', { amount: e.status.bleed, enemy: e }).amount;
       dealDamageToEnemy(e, amount, { ignoreBlock:true });
       log('[出血] ' + e.name + 'に' + amount + 'ダメージ (残HP ' + e.hp + ')');
     }
@@ -1923,12 +1989,22 @@ function renderHud(){
   const hud = el('div', 'mr-hud');
   hud.appendChild(el('span', 'chip', '❤ <span class="hpv">' + r.hp + '</span>/' + r.maxHp));
   hud.appendChild(el('span', 'chip', '💰 <span class="goldv">' + r.gold + '</span>'));
-  const relics = el('span', 'chip');
-  relics.textContent = r.relics.length
-    ? r.relics.map(id => (RELICS[id] ? RELICS[id].icon : '?')).join(' ')
-    : '—';
-  relics.title = r.relics.map(id => RELICS[id] && RELICS[id].name).join(' / ');
+  const relics = el('span', 'chip mr-relics');
+  if (!r.relics.length) relics.textContent = '—';
+  const now = Date.now();
+  let flashing = false;
+  for (const id of r.relics){
+    const rel = RELICS[id];
+    if (!rel) continue;
+    const fresh = relicFlash[id] && (now - relicFlash[id] < 600);
+    if (fresh) flashing = true;
+    const icon = el('span', 'relic' + (fresh ? ' flash' : ''), rel.icon);
+    icon.title = rel.name + ' — ' + rel.desc;
+    relics.appendChild(icon);
+  }
+  relics.addEventListener('click', showRelicList);
   hud.appendChild(relics);
+  if (flashing) scheduleRender(650);
   hud.appendChild(el('span', 'mr-spacer'));
   const d = DIFFICULTY[r.difficulty];
   hud.appendChild(el('span', 'mr-badge' + (r.difficulty === 'HARD' ? ' hard' : ''), d.label));
@@ -1998,7 +2074,7 @@ function renderTitle(){
 
   s.appendChild(el('div', 'mr-spacer'));
   const foot = el('div', 'mr-note mr-center');
-  foot.innerHTML = 'Phase 6 — 報酬・ショップ・休憩・イベント<br>'
+  foot.innerHTML = 'Phase 7 — レリック<br>'
     + 'カード ' + Object.keys(CARDS).length + '種 / 敵 ' + Object.keys(ENEMIES).length + '種 / レリック '
     + Object.keys(RELICS).length + '種';
   s.appendChild(foot);
@@ -2438,6 +2514,32 @@ function onHandCardClick(i){
   }
   const idx = B.enemies.findIndex(e => e.alive);
   playCard(i, idx);
+}
+
+/* --- レリック --- */
+function showRelicList(){
+  const ov = el('div', 'mr-modal');
+  const box = el('div', 'mr-modalbox');
+  box.appendChild(el('div', 'mr-modaltitle', '所持レリック'));
+  const ids = G.run ? G.run.relics : [];
+  if (!ids.length) box.appendChild(el('div', 'mr-note', 'まだ何も持っていない'));
+  for (const id of ids){
+    const r = RELICS[id];
+    if (!r) continue;
+    box.appendChild(el('div', 'mr-panel',
+      r.icon + ' <b>' + r.name + '</b><br><span class="mr-note">' + r.desc + '</span>'));
+  }
+  box.appendChild(btn('閉じる', 'ghost', () => document.body.removeChild(ov)));
+  ov.appendChild(box);
+  ov.addEventListener('click', (e) => { if (e.target === ov) document.body.removeChild(ov); });
+  document.body.appendChild(ov);
+}
+
+/** 画面下に短く出る通知 */
+function toast(html){
+  const t = el('div', 'mr-toast', html);
+  document.body.appendChild(t);
+  setTimeout(() => { if (t.parentNode) t.parentNode.removeChild(t); }, 2600);
 }
 
 /* --- カード選択モーダル(除去 / 強化 で共用) --- */
@@ -3019,6 +3121,7 @@ window.MROG = { G, CARDS, CARD_LIST, ENEMIES, RELICS, DIFFICULTY, NODE_WEIGHTS,
   MAP_ROWS, MAP_COLS, BOSS_ROW,
   makeReward, pickRewardCards, makeShopStock, makeTreasure, EVENTS, pickEvent,
   endRun, relicPool, availableRelics, rollRelic, gainRelic, upgradableCards, PRICE,
+  fireRelicHook, cardCost, RELIC_LIST,
   get battle(){ return G.battle; } };
 </script>
 </body>
