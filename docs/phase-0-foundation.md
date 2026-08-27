@@ -62,7 +62,7 @@ const fmt = (n) => String(n);
 
 ---
 
-## 3. DATA — カード定義(全36枚)
+## 3. DATA — カード定義(全37枚)
 
 `CARDS` を **id をキーにしたオブジェクト**で定義する。
 
@@ -297,8 +297,10 @@ Phase 0 時点の中身:
 
 - [ ] `index.html` をブラウザで開くとタイトル画面が表示される
 - [ ] 「ラン開始」→ EXERCISE(プレースホルダ)→ 戻る、が動く
-- [ ] コンソールに `Object.keys(CARDS).length` → **36**
-- [ ] コンソールに `Object.keys(ENEMIES).length` → **9**
+- [ ] コンソールに `Object.keys(CARDS).length` → **37**
+      (ATTACK 10 / SKILL 9 / DEBUFF 9 / POWER 9)
+- [ ] コンソールに `Object.keys(ENEMIES).length` → **10**
+      (敵は9種だが、双子の影を `elite_twin_shadow_a` / `_b` の2定義に分割しているため)
 - [ ] `saveGame()` 後にリロードして `G.meta` が復元される
 - [ ] スマホ幅(375px)とPC幅の両方でレイアウトが崩れない
 - [ ] エラー・警告がコンソールに出ない

@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>筋トレローグライク</title>
+<style>
+/* ===== SECTION: STYLE ===== */
+:root{
+  --bg:#14161c; --panel:#1e222c; --panel2:#252a36; --line:#333a48;
+  --text:#e8ecf2; --dim:#8b93a5;
+  --atk:#e2574c; --skl:#4caf7d; --dbf:#a86fd6; --pwr:#4a90d9;
+  --hp:#d0453c; --block:#5a9fd4; --energy:#e8c34a; --gold:#e8c34a;
+  --rare:#e8c34a; --uncommon:#5a9fd4; --common:#8b93a5; --basic:#5c6474;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+  font-size:15px; line-height:1.6; overscroll-behavior:none;
+}
+#app{max-width:480px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column}
+
+.mr-screen{flex:1;display:flex;flex-direction:column;padding:16px;gap:14px}
+.mr-title{font-size:22px;font-weight:700;letter-spacing:.04em;margin:0}
+.mr-sub{color:var(--dim);font-size:13px;margin:0}
+.mr-panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.mr-row{display:flex;gap:8px;align-items:center}
+.mr-spacer{flex:1}
+.mr-center{text-align:center}
+
+.mr-btn{
+  appearance:none;border:1px solid var(--line);background:var(--panel2);color:var(--text);
+  font:inherit;font-weight:600;padding:12px 16px;border-radius:9px;cursor:pointer;
+  transition:background .12s,border-color .12s,transform .06s;width:100%;
+}
+.mr-btn:hover:not(:disabled){background:#2e3444;border-color:#4a5468}
+.mr-btn:active:not(:disabled){transform:translateY(1px)}
+.mr-btn:disabled{opacity:.4;cursor:default}
+.mr-btn.primary{background:linear-gradient(180deg,#3a6ea8,#2f5a8a);border-color:#4a80bd}
+.mr-btn.primary:hover{background:linear-gradient(180deg,#4479b6,#356397)}
+.mr-btn.ghost{background:transparent}
+.mr-btn.small{padding:8px 12px;font-size:13px;width:auto}
+
+/* HUD */
+.mr-hud{
+  display:flex;align-items:center;gap:10px;padding:8px 12px;
+  background:var(--panel);border-bottom:1px solid var(--line);font-size:13px;flex-wrap:wrap;
+}
+.mr-hud .chip{display:flex;align-items:center;gap:4px;white-space:nowrap}
+.mr-hud .hpv{color:var(--hp);font-weight:700}
+.mr-hud .goldv{color:var(--gold);font-weight:700}
+.mr-badge{
+  font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--dim);
+}
+.mr-badge.hard{color:#f0a04a;border-color:#7a5a30;background:#2a2018}
+
+/* コア表示 */
+.mr-cores{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mr-core{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:10px 6px;text-align:center}
+.mr-core .n{font-size:20px;font-weight:700;line-height:1.2}
+.mr-core .l{font-size:11px;color:var(--dim)}
+.mr-core.chest .n{color:var(--atk)} .mr-core.leg .n{color:var(--skl)}
+.mr-core.twist .n{color:var(--dbf)} .mr-core.core .n{color:var(--pwr)}
+
+/* カード */
+.mr-card{
+  position:relative;width:104px;min-height:146px;border-radius:9px;padding:8px;
+  background:linear-gradient(180deg,var(--panel2),#1a1e28);
+  border:1.5px solid var(--line);display:flex;flex-direction:column;gap:5px;
+  font-size:11px;line-height:1.4;cursor:default;flex:0 0 auto;
+}
+.mr-card .cname{font-size:12px;font-weight:700;line-height:1.25;padding-right:2px}
+.mr-card .ctext{color:#cfd6e2;flex:1}
+.mr-card .ccost{
+  position:absolute;top:-7px;left:-7px;width:24px;height:24px;border-radius:50%;
+  background:var(--energy);color:#241d05;font-weight:800;font-size:13px;
+  display:flex;align-items:center;justify-content:center;border:2px solid #14161c;
+}
+.mr-card .ctag{font-size:10px;color:var(--dim);letter-spacing:.04em}
+.mr-card.cat-ATTACK{border-color:var(--atk)} .mr-card.cat-SKILL{border-color:var(--skl)}
+.mr-card.cat-DEBUFF{border-color:var(--dbf)} .mr-card.cat-POWER{border-color:var(--pwr)}
+.mr-card.rar-RARE{box-shadow:0 0 0 1px var(--rare) inset}
+.mr-card.upgraded .cname{color:var(--rare)}
+.mr-card.playable{cursor:pointer}
+.mr-card.playable:hover{transform:translateY(-4px);transition:transform .1s}
+.mr-card.disabled{opacity:.45}
+.mr-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+
+.mr-note{color:var(--dim);font-size:12px}
+.mr-hr{height:1px;background:var(--line);border:0;margin:4px 0}
+.mr-placeholder{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;color:var(--dim);text-align:center;
+}
+.mr-debug{
+  position:fixed;right:8px;bottom:8px;z-index:99;background:#2a1a1a;border:1px solid #6a3a3a;
+  border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:6px;max-width:170px;
+}
+.mr-debug .t{font-size:10px;color:#c88;letter-spacing:.08em}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+"use strict";
+
+/* ===== SECTION: UTIL ===== */
+const rnd   = (n) => Math.floor(Math.random() * n);
+const pick  = (arr) => arr[rnd(arr.length)];
+const range = (min, max) => min + rnd(max - min + 1);
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+function shuffle(arr){
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--){
+    const j = rnd(i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/** entries: [{v, w}] → w の重みで v を1つ返す */
+function weightedPick(entries){
+  let total = 0;
+  for (const e of entries) total += e.w;
+  if (total <= 0) return entries.length ? entries[0].v : null;
+  let r = Math.random() * total;
+  for (const e of entries){ r -= e.w; if (r < 0) return e.v; }
+  return entries[entries.length - 1].v;
+}
+
+function el(tag, cls, html){
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (html != null) n.innerHTML = html;
+  return n;
+}
+function btn(label, cls, onClick){
+  const b = el('button', 'mr-btn ' + (cls || ''), label);
+  b.addEventListener('click', onClick);
+  return b;
+}
+function deepClone(o){ return JSON.parse(JSON.stringify(o)); }
+
+const DEBUG = new URLSearchParams(location.search).get('debug') === '1';
+
+
+/* ===== SECTION: DATA ===== */
+
+/* --- カード ---
+ * effects の type 一覧(解決処理は Phase 2/3):
+ *   damage / damageMulti / block / draw / energy / status / strength /
+ *   evade / counter / blockPerTurn / reflect / blockOnPower / blockBonus /
+ *   keepBlock / damagePerAttackPlayed / damagePerAttackInHand
+ * up は effects を全置換する差分。exhaust を上書きすることもある。
+ */
+const CARD_LIST = [
+/* --- ATTACK(腕立て伏せ / 胸コア) --- */
+{ id:'atk_punch', name:'パンチ', cat:'ATTACK', rarity:'BASIC', cost:1, type:'attack', target:'single',
+  effects:[{type:'damage',value:6}], text:'6ダメージ',
+  up:{ effects:[{type:'damage',value:9}], text:'9ダメージ' } },
+
+{ id:'atk_double_punch', name:'ダブルパンチ', cat:'ATTACK', rarity:'BASIC', cost:1, type:'attack', target:'single',
+  effects:[{type:'damageMulti',value:3,times:2}], text:'3ダメージ×2回',
+  up:{ effects:[{type:'damageMulti',value:4,times:2}], text:'4ダメージ×2回' } },
+
+{ id:'atk_body_blow', name:'ボディブロー', cat:'ATTACK', rarity:'COMMON', cost:1, type:'attack', target:'single',
+  effects:[{type:'damage',value:8}], text:'8ダメージ',
+  up:{ effects:[{type:'damage',value:11}], text:'11ダメージ' } },
+
+{ id:'atk_hook', name:'フック', cat:'ATTACK', rarity:'COMMON', cost:1, type:'attack', target:'single',
+  effects:[{type:'damage',value:10}], text:'10ダメージ',
+  up:{ effects:[{type:'damage',value:14}], text:'14ダメージ' } },
+
+{ id:'atk_rush', name:'ラッシュ', cat:'ATTACK', rarity:'COMMON', cost:2, type:'attack', target:'single',
+  effects:[{type:'damageMulti',value:6,times:2}], text:'6ダメージ×2回',
+  up:{ effects:[{type:'damageMulti',value:8,times:2}], text:'8ダメージ×2回' } },
+
+{ id:'atk_uppercut', name:'アッパーカット', cat:'ATTACK', rarity:'UNCOMMON', cost:2, type:'attack', target:'single',
+  effects:[{type:'damage',value:12},{type:'status',key:'weak',value:1}], text:'12ダメージ 弱体1',
+  up:{ effects:[{type:'damage',value:16},{type:'status',key:'weak',value:2}], text:'16ダメージ 弱体2' } },
+
+{ id:'atk_barrage', name:'連続殴打', cat:'ATTACK', rarity:'UNCOMMON', cost:2, type:'attack', target:'single',
+  effects:[{type:'damageMulti',value:5,times:3}], text:'5ダメージ×3回',
+  up:{ effects:[{type:'damageMulti',value:7,times:3}], text:'7ダメージ×3回' } },
+
+{ id:'atk_heavy_blow', name:'ヘビーブロー', cat:'ATTACK', rarity:'UNCOMMON', cost:2, type:'attack', target:'single',
+  exhaust:true, effects:[{type:'damage',value:14}], text:'14ダメージ 除外',
+  up:{ effects:[{type:'damage',value:18}], text:'18ダメージ 除外' } },
+
+{ id:'atk_finish_blow', name:'フィニッシュブロー', cat:'ATTACK', rarity:'RARE', cost:3, type:'attack', target:'single',
+  effects:[{type:'damagePerAttackPlayed',base:8,per:4}],
+  text:'8ダメージ+このターンに使ったATTACK1枚につき+4',
+  up:{ effects:[{type:'damagePerAttackPlayed',base:12,per:6}],
+       text:'12ダメージ+このターンに使ったATTACK1枚につき+6' } },
+
+{ id:'atk_fist_dance', name:'拳打乱舞', cat:'ATTACK', rarity:'RARE', cost:1, type:'attack', target:'single',
+  effects:[{type:'damagePerAttackInHand',base:4,per:2}],
+  text:'4ダメージ+手札のATTACK1枚につき+2',
+  up:{ effects:[{type:'damagePerAttackInHand',base:6,per:3}],
+       text:'6ダメージ+手札のATTACK1枚につき+3' } },
+
+/* --- SKILL(ジャンプスクワット / 脚コア) --- */
+{ id:'skl_sidestep', name:'サイドステップ', cat:'SKILL', rarity:'BASIC', cost:0, type:'skill', target:'self',
+  effects:[{type:'evade',value:1}], text:'次に受ける攻撃1回を無効化',
+  up:{ effects:[{type:'evade',value:2}], text:'次に受ける攻撃2回を無効化' } },
+
+{ id:'skl_dash', name:'ダッシュ', cat:'SKILL', rarity:'BASIC', cost:1, type:'skill', target:'self',
+  effects:[{type:'draw',value:1}], text:'カードを1枚引く',
+  up:{ effects:[{type:'draw',value:2}], text:'カードを2枚引く' } },
+
+{ id:'skl_footwork', name:'フットワーク', cat:'SKILL', rarity:'COMMON', cost:1, type:'skill', target:'self',
+  exhaust:true, effects:[{type:'energy',value:1}], text:'Energy+1 除外',
+  up:{ exhaust:false, effects:[{type:'energy',value:1}], text:'Energy+1' } },
+
+{ id:'skl_agility', name:'俊敏', cat:'SKILL', rarity:'COMMON', cost:1, type:'skill', target:'self',
+  effects:[{type:'draw',value:2}], text:'カードを2枚引く',
+  up:{ effects:[{type:'draw',value:3}], text:'カードを3枚引く' } },
+
+{ id:'skl_backstep', name:'バックステップ', cat:'SKILL', rarity:'COMMON', cost:1, type:'skill', target:'self',
+  effects:[{type:'block',value:8}], text:'ブロック8',
+  up:{ effects:[{type:'block',value:11}], text:'ブロック11' } },
+
+{ id:'skl_double_jump', name:'二段跳び', cat:'SKILL', rarity:'UNCOMMON', cost:1, type:'skill', target:'self',
+  effects:[{type:'energy',value:1},{type:'draw',value:1}], text:'Energy+1 カードを1枚引く',
+  up:{ effects:[{type:'energy',value:1},{type:'draw',value:2}], text:'Energy+1 カードを2枚引く' } },
+
+{ id:'skl_counter_stance', name:'カウンター体勢', cat:'SKILL', rarity:'UNCOMMON', cost:1, type:'skill', target:'self',
+  effects:[{type:'counter',value:5}], text:'このターン攻撃を受けたら5ダメージ反撃(1回)',
+  up:{ effects:[{type:'counter',value:8}], text:'このターン攻撃を受けたら8ダメージ反撃(1回)' } },
+
+{ id:'skl_sprint', name:'疾走', cat:'SKILL', rarity:'RARE', cost:0, type:'skill', target:'self',
+  exhaust:true, effects:[{type:'draw',value:2}], text:'カードを2枚引く 除外',
+  up:{ exhaust:false, effects:[{type:'draw',value:2}], text:'カードを2枚引く' } },
+
+{ id:'skl_lightning', name:'電光石火', cat:'SKILL', rarity:'RARE', cost:1, type:'skill', target:'self',
+  exhaust:true, effects:[{type:'energy',value:2},{type:'draw',value:2}], text:'Energy+2 カードを2枚引く 除外',
+  up:{ effects:[{type:'energy',value:3},{type:'draw',value:2}], text:'Energy+3 カードを2枚引く 除外' } },
+
+/* --- DEBUFF(ツイストレッグレイズ / 捻転コア) --- */
+{ id:'dbf_feint', name:'フェイント', cat:'DEBUFF', rarity:'BASIC', cost:1, type:'skill', target:'single',
+  effects:[{type:'status',key:'weak',value:1}], text:'弱体1を付与',
+  up:{ effects:[{type:'status',key:'weak',value:2}], text:'弱体2を付与' } },
+
+{ id:'dbf_sharp_gaze', name:'鋭い視線', cat:'DEBUFF', rarity:'BASIC', cost:1, type:'skill', target:'single',
+  effects:[{type:'status',key:'vulnerable',value:1}], text:'脆弱1を付与',
+  up:{ effects:[{type:'status',key:'vulnerable',value:2}], text:'脆弱2を付与' } },
+
+{ id:'dbf_bleed_strike', name:'出血の一撃', cat:'DEBUFF', rarity:'COMMON', cost:1, type:'skill', target:'single',
+  effects:[{type:'damage',value:4},{type:'status',key:'bleed',value:2}], text:'4ダメージ 出血2',
+  up:{ effects:[{type:'damage',value:6},{type:'status',key:'bleed',value:3}], text:'6ダメージ 出血3' } },
+
+{ id:'dbf_weaken_form', name:'弱体化の型', cat:'DEBUFF', rarity:'COMMON', cost:1, type:'skill', target:'all',
+  effects:[{type:'status',key:'weak',value:1}], text:'敵全体に弱体1',
+  up:{ effects:[{type:'status',key:'weak',value:2}], text:'敵全体に弱体2' } },
+
+{ id:'dbf_taunt', name:'挑発', cat:'DEBUFF', rarity:'COMMON', cost:1, type:'skill', target:'all',
+  effects:[{type:'status',key:'vulnerable',value:1}], text:'敵全体に脆弱1',
+  up:{ effects:[{type:'status',key:'vulnerable',value:2}], text:'敵全体に脆弱2' } },
+
+{ id:'dbf_curse', name:'呪縛', cat:'DEBUFF', rarity:'UNCOMMON', cost:1, type:'skill', target:'single',
+  effects:[{type:'status',key:'weak',value:2},{type:'status',key:'vulnerable',value:1}], text:'弱体2 脆弱1',
+  up:{ effects:[{type:'status',key:'weak',value:2},{type:'status',key:'vulnerable',value:2}], text:'弱体2 脆弱2' } },
+
+{ id:'dbf_finishing_thrust', name:'トドメの一突き', cat:'DEBUFF', rarity:'UNCOMMON', cost:2, type:'skill', target:'single',
+  effects:[{type:'damage',value:8},{type:'status',key:'bleed',value:3},{type:'status',key:'vulnerable',value:1}],
+  text:'8ダメージ 出血3 脆弱1',
+  up:{ effects:[{type:'damage',value:10},{type:'status',key:'bleed',value:4},{type:'status',key:'vulnerable',value:2}],
+       text:'10ダメージ 出血4 脆弱2' } },
+
+{ id:'dbf_mass_break', name:'全体崩し', cat:'DEBUFF', rarity:'RARE', cost:2, type:'skill', target:'all',
+  effects:[{type:'status',key:'vulnerable',value:2},{type:'status',key:'weak',value:2}], text:'敵全体に脆弱2 弱体2',
+  up:{ effects:[{type:'status',key:'vulnerable',value:3},{type:'status',key:'weak',value:3}], text:'敵全体に脆弱3 弱体3' } },
+
+{ id:'dbf_erode', name:'蝕む一撃', cat:'DEBUFF', rarity:'RARE', cost:1, type:'skill', target:'single',
+  effects:[{type:'damage',value:2},{type:'status',key:'bleed',value:5}], text:'2ダメージ 出血5',
+  up:{ effects:[{type:'damage',value:2},{type:'status',key:'bleed',value:7}], text:'2ダメージ 出血7' } },
+
+/* --- POWER(プランク / 体幹コア) --- */
+{ id:'pwr_guard', name:'ガード', cat:'POWER', rarity:'BASIC', cost:1, type:'power', target:'self',
+  effects:[{type:'block',value:7}], text:'ブロック7',
+  up:{ effects:[{type:'block',value:10}], text:'ブロック10' } },
+
+{ id:'pwr_brace', name:'踏ん張り', cat:'POWER', rarity:'BASIC', cost:1, type:'power', target:'self',
+  effects:[{type:'block',value:5},{type:'blockPerTurn',value:2,turns:2}],
+  text:'ブロック5 2ターンの間ターン開始時ブロック2',
+  up:{ effects:[{type:'block',value:5},{type:'blockPerTurn',value:3,turns:3}],
+       text:'ブロック5 3ターンの間ターン開始時ブロック3' } },
+
+{ id:'pwr_iron_stance', name:'鉄壁の構え', cat:'POWER', rarity:'COMMON', cost:2, type:'power', target:'self',
+  effects:[{type:'block',value:12}], text:'ブロック12',
+  up:{ effects:[{type:'block',value:16}], text:'ブロック16' } },
+
+{ id:'pwr_repel', name:'反発', cat:'POWER', rarity:'COMMON', cost:1, type:'power', target:'self',
+  effects:[{type:'block',value:6},{type:'reflect'}], text:'ブロック6 ターン終了時に残ブロック分を敵全体に反射',
+  up:{ effects:[{type:'block',value:9},{type:'reflect'}], text:'ブロック9 ターン終了時に残ブロック分を敵全体に反射' } },
+
+{ id:'pwr_lasting_strength', name:'継続する強さ', cat:'POWER', rarity:'COMMON', cost:1, type:'power', target:'self',
+  keep:true, effects:[{type:'blockPerTurn',value:3,turns:0}], text:'【Power】毎ターン開始時ブロック3',
+  up:{ effects:[{type:'blockPerTurn',value:4,turns:0}], text:'【Power】毎ターン開始時ブロック4' } },
+
+{ id:'pwr_endurance', name:'忍耐', cat:'POWER', rarity:'UNCOMMON', cost:1, type:'power', target:'self',
+  keep:true, effects:[{type:'blockOnPower',value:2}], text:'【Power】POWERカードを使うたびブロック2',
+  up:{ effects:[{type:'blockOnPower',value:3}], text:'【Power】POWERカードを使うたびブロック3' } },
+
+{ id:'pwr_immovable', name:'不動の心', cat:'POWER', rarity:'UNCOMMON', cost:2, type:'power', target:'self',
+  keep:true, effects:[{type:'strength',value:2}], text:'【Power】力+2',
+  up:{ effects:[{type:'strength',value:3}], text:'【Power】力+3' } },
+
+{ id:'pwr_perfect_defense', name:'完全防御', cat:'POWER', rarity:'RARE', cost:2, type:'power', target:'self',
+  keep:true, effects:[{type:'blockBonus',value:2}], text:'【Power】ブロックを得るたび追加で+2',
+  up:{ effects:[{type:'blockBonus',value:3}], text:'【Power】ブロックを得るたび追加で+3' } },
+
+{ id:'pwr_diamond_stance', name:'金剛の構え', cat:'POWER', rarity:'RARE', cost:3, type:'power', target:'self',
+  effects:[{type:'block',value:20},{type:'keepBlock'}], text:'ブロック20 以降ブロックがターン終了時に消滅しない',
+  up:{ effects:[{type:'block',value:25},{type:'keepBlock'}], text:'ブロック25 以降ブロックがターン終了時に消滅しない' } },
+];
+
+const CARDS = {};
+for (const c of CARD_LIST){
+  c.exhaust = c.exhaust || false;
+  c.keep    = c.keep    || false;
+  CARDS[c.id] = c;
+}
+
+const CATEGORIES = ['ATTACK','SKILL','DEBUFF','POWER'];
+const CAT_LABEL  = { ATTACK:'攻', SKILL:'速', DEBUFF:'崩', POWER:'耐' };
+const CAT_NAME   = { ATTACK:'ATTACK', SKILL:'SKILL', DEBUFF:'DEBUFF', POWER:'POWER' };
+const RARITY_LABEL = { BASIC:'基本', COMMON:'C', UNCOMMON:'U', RARE:'R' };
+
+/* 種目 ↔ カテゴリ ↔ コア の対応 */
+const EXERCISES = [
+  { key:'pushup',        label:'腕立て伏せ',          unit:'回', cat:'ATTACK', core:'chest', coreLabel:'胸コア' },
+  { key:'jumpSquat',     label:'ジャンプスクワット',  unit:'回', cat:'SKILL',  core:'leg',   coreLabel:'脚コア' },
+  { key:'twistLegRaise', label:'ツイストレッグレイズ',unit:'回', cat:'DEBUFF', core:'twist', coreLabel:'捻転コア' },
+  { key:'plankSeconds',  label:'プランク',            unit:'秒', cat:'POWER',  core:'core',  coreLabel:'体幹コア' },
+];
+/** プランクの秒数→カウント換算(確定事項: 2秒 = 1カウント) */
+const PLANK_SECONDS_PER_COUNT = 2;
+
+/* --- 敵 ---
+ * intent: attack / block / buff / debuff / heal
+ * action には複数キーを併記できる(例: {intent:'attack', value:6, status:{weak:1}})
+ * フック: onEnter(enemy) / onTurnStart(enemy) / onAllyDeath(enemy)
+ */
+const ENEMY_LIST = [
+{ id:'slime_fake', name:'スライムモドキ', tier:'NORMAL', hpMin:18, hpMax:22,
+  phases:[{ hpThreshold:1.0, loop:true, pattern:[
+    { intent:'attack', value:6 },
+    { intent:'attack', value:6, status:{weak:1} },
+  ]}]},
+
+{ id:'spike_rat', name:'トゲネズミ', tier:'NORMAL', hpMin:12, hpMax:15,
+  phases:[{ hpThreshold:1.0, loop:true, pattern:[
+    { intent:'attack', value:4, times:2 },
+  ]}]},
+
+{ id:'wander_golem', name:'徘徊ゴーレム', tier:'NORMAL', hpMin:25, hpMax:30,
+  phases:[{ hpThreshold:1.0, loop:true, pattern:[
+    { intent:'attack', value:10 },
+    { intent:'block',  value:8 },
+  ]}]},
+
+{ id:'bat_swarm', name:'コウモリの群れ', tier:'NORMAL', hpMin:15, hpMax:18,
+  phases:[{ hpThreshold:1.0, loop:true, pattern:[
+    { intent:'attack', value:3, times:3 },
+  ]}]},
+
+{ id:'shadow_scout', name:'影の斥候', tier:'NORMAL', hpMin:20, hpMax:24,
+  phases:[{ hpThreshold:1.0, weighted:true, pattern:[
+    { v:{ intent:'attack', value:8 }, w:70 },
+    { v:{ intent:'heal',   value:5 }, w:30 },
+  ]}]},
+
+{ id:'elite_heavy_soldier', name:'重装兵', tier:'ELITE', hpMin:45, hpMax:45,
+  phases:[{ hpThreshold:1.0, loop:true, pattern:[
+    { intent:'attack', value:12 },
+    { intent:'block',  value:15, strength:2 },
+  ]}]},
+
+/* 双子の影は2体で1組。ENCOUNTERS 側で a/b を並べる(Phase 4) */
+{ id:'elite_twin_shadow_a', name:'双子の影(兄)', tier:'ELITE', hpMin:28, hpMax:28,
+  twin:true, startPatternIdx:0,
+  phases:[{ hpThreshold:1.0, loop:true, pattern:[
+    { intent:'attack', value:6 },
+    { intent:'debuff', status:{vulnerable:1} },
+  ]}],
+  onAllyDeath(e){ e.status.strength += 3; return e.name + 'が怒りに震えた! 力+3'; } },
+
+{ id:'elite_twin_shadow_b', name:'双子の影(弟)', tier:'ELITE', hpMin:28, hpMax:28,
+  twin:true, startPatternIdx:1,
+  phases:[{ hpThreshold:1.0, loop:true, pattern:[
+    { intent:'attack', value:6 },
+    { intent:'debuff', status:{vulnerable:1} },
+  ]}],
+  onAllyDeath(e){ e.status.strength += 3; return e.name + 'が怒りに震えた! 力+3'; } },
+
+{ id:'boss_overload_warden', name:'過負荷の番人', tier:'BOSS', hpMin:80, hpMax:80,
+  phases:[
+    { hpThreshold:1.0, loop:true, pattern:[
+      { intent:'debuff', status:{vulnerable:1} },
+      { intent:'attack', value:14 },
+    ]},
+    { hpThreshold:'bossPhase2', loop:true,
+      onEnter(e){ e.enraged = true; return '過負荷の番人が暴走した!'; },
+      pattern:[
+        { intent:'attack', value:18 },
+        { intent:'attack', value:18 },
+        { intent:'attack', value:18, heal:10 },
+      ]},
+  ]},
+
+{ id:'boss_sloth_colossus', name:'怠惰の巨像', tier:'BOSS', hpMin:90, hpMax:90,
+  onTurnStart(e){ e.status.strength += 1; return null; },
+  phases:[
+    { hpThreshold:1.0, loop:true, pattern:[ { intent:'attack', value:8 } ]},
+    { hpThreshold:'bossPhase2', loop:true,
+      onEnter(e){ e.status.strength += 3; e.enraged = true; return '怠惰の巨像が目を覚ました! 力+3'; },
+      pattern:[ { intent:'attack', value:8 } ]},
+  ]},
+];
+
+const ENEMIES = {};
+for (const e of ENEMY_LIST) ENEMIES[e.id] = e;
+
+/* --- レリック(効果の実装は Phase 7) --- */
+const RELIC_LIST = [
+{ id:'rel_training_proof',    name:'鍛錬の証',       icon:'🏅', desc:'戦闘開始時、力+1' },
+{ id:'rel_unyielding_plate',  name:'不屈のプレート', icon:'🛡', desc:'戦闘開始時、ブロック+5' },
+{ id:'rel_accelerator',       name:'加速装置',       icon:'⚡', desc:'戦闘の最初のターンのみ Energy+1' },
+{ id:'rel_grudge_record',     name:'執念の記録',     icon:'📕', desc:'出血によるダメージ+50%' },
+{ id:'rel_battle_wisdom',     name:'継戦の心得',     icon:'📜', desc:'POWERカードのコスト-1(最低0)' },
+{ id:'rel_sweat_crystal',     name:'汗の結晶',       icon:'💧', desc:'戦闘勝利時、ゴールド+10' },
+];
+const RELICS = {};
+for (const r of RELIC_LIST) RELICS[r.id] = r;
+
+/* 初期から出現するレリック(残りは Phase 8 でアンロック) */
+const STARTER_RELICS = ['rel_training_proof','rel_unyielding_plate','rel_accelerator'];
+
+/* --- 難易度 --- */
+const DIFFICULTY = {
+  NORMAL: { key:'NORMAL', label:'ふつう', playerMaxHp:70,
+            enemyHpMult:1.0,  enemyDmgMult:1.0,
+            enemyStartStrength:{ NORMAL:0, ELITE:0, BOSS:0 },
+            shopPriceMult:1.0, restHealRate:0.30, bossPhase2:0.50,
+            goldMult:1.0, coreMult:1.0, rareWeightBonus:0 },
+  HARD:   { key:'HARD',   label:'むずい', playerMaxHp:60,
+            enemyHpMult:1.25, enemyDmgMult:1.25,
+            enemyStartStrength:{ NORMAL:1, ELITE:2, BOSS:2 },
+            shopPriceMult:1.25, restHealRate:0.20, bossPhase2:0.60,
+            goldMult:1.2, coreMult:1.2, rareWeightBonus:3 },
+};
+
+/* --- マップのノード出現重み(Phase 5) --- */
+const NODE_WEIGHTS = {
+  NORMAL: [{v:'COMBAT',w:45},{v:'EVENT',w:22},{v:'REST',w:12},
+           {v:'SHOP',w:8},{v:'ELITE',w:8},{v:'TREASURE',w:5}],
+  HARD:   [{v:'COMBAT',w:48},{v:'EVENT',w:20},{v:'REST',w:8},
+           {v:'SHOP',w:7},{v:'ELITE',w:13},{v:'TREASURE',w:4}],
+};
+
+/* --- 初期デッキ --- */
+const STARTING_DECK = [
+  'atk_punch','atk_punch','atk_punch',
+  'pwr_guard','pwr_guard','pwr_guard',
+  'skl_sidestep','dbf_feint',
+];
+
+
+/* ===== SECTION: STATE ===== */
+const SAVE_KEY = 'mrog_save_v1';
+
+function newMeta(){
+  return {
+    cores: { chest:0, leg:0, twist:0, core:0 },
+    unlocked: [],
+    upgradedBasics: [],
+    unlockedRelics: [],
+    clearedNormal: false,
+    clearedHard: false,
+    lastPlayDate: null,
+  };
+}
+
+const G = {
+  screen: 'TITLE',
+  meta: newMeta(),
+  run: null,
+  battle: null,
+};
+
+function saveGame(){
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ meta:G.meta, run:G.run }));
+  } catch (err) {
+    console.warn('セーブに失敗しました', err);
+  }
+}
+
+function loadGame(){
+  let raw = null;
+  try { raw = localStorage.getItem(SAVE_KEY); } catch (err) { return; }
+  if (!raw) return;
+  let data;
+  try { data = JSON.parse(raw); }
+  catch (err) {
+    console.info('セーブデータが壊れていたため破棄しました');
+    try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+    return;
+  }
+  if (!data || typeof data !== 'object') return;
+  G.meta = Object.assign(newMeta(), data.meta || {});
+  G.meta.cores = Object.assign({ chest:0, leg:0, twist:0, core:0 }, G.meta.cores || {});
+  G.run = data.run || null;
+}
+
+function resetSave(){
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+  G.meta = newMeta();
+  G.run = null;
+  G.battle = null;
+}
+
+/* カードインスタンス(uid で個体を識別する) */
+let _uid = 1;
+function newCardInstance(id, upgraded){
+  return { uid: _uid++, id: id, upgraded: !!upgraded };
+}
+/** upgraded を反映した実効カード定義を返す */
+function effectiveCard(inst){
+  const base = CARDS[inst.id];
+  if (!base) throw new Error('未知のカードID: ' + inst.id);
+  if (!inst.upgraded || !base.up) return base;
+  return Object.assign({}, base, base.up, { name: base.name + '+' });
+}
+
+
+/* ===== SECTION: SCREENS ===== */
+const SCREENS = ['TITLE','DIFFICULTY','EXERCISE','DECK_PREVIEW','MAP','BATTLE','REWARD',
+                 'SHOP','REST','EVENT','TREASURE','META','GAMEOVER','VICTORY'];
+
+function go(screen){
+  if (!SCREENS.includes(screen)) throw new Error('未知の画面: ' + screen);
+  G.screen = screen;
+  render();
+}
+
+function render(){
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  const fn = RENDERERS[G.screen] || renderPlaceholder;
+  const nodes = fn();
+  for (const n of (Array.isArray(nodes) ? nodes : [nodes])) if (n) app.appendChild(n);
+  if (DEBUG) app.appendChild(renderDebugPanel());
+}
+
+/* --- 共通パーツ --- */
+
+/** ラン中の画面で使い回すヘッダ */
+function renderHud(){
+  const r = G.run;
+  if (!r) return null;
+  const hud = el('div', 'mr-hud');
+  hud.appendChild(el('span', 'chip', '❤ <span class="hpv">' + r.hp + '</span>/' + r.maxHp));
+  hud.appendChild(el('span', 'chip', '💰 <span class="goldv">' + r.gold + '</span>'));
+  const relics = el('span', 'chip');
+  relics.textContent = r.relics.length
+    ? r.relics.map(id => (RELICS[id] ? RELICS[id].icon : '?')).join(' ')
+    : '—';
+  relics.title = r.relics.map(id => RELICS[id] && RELICS[id].name).join(' / ');
+  hud.appendChild(relics);
+  hud.appendChild(el('span', 'mr-spacer'));
+  const d = DIFFICULTY[r.difficulty];
+  hud.appendChild(el('span', 'mr-badge' + (r.difficulty === 'HARD' ? ' hard' : ''), d.label));
+  return hud;
+}
+
+/** カード1枚の DOM。opts: {playable, disabled, onClick, showCost} */
+function renderCardEl(inst, opts){
+  opts = opts || {};
+  const c = effectiveCard(inst);
+  const cls = ['mr-card', 'cat-' + c.cat, 'rar-' + c.rarity];
+  if (inst.upgraded) cls.push('upgraded');
+  if (opts.playable) cls.push('playable');
+  if (opts.disabled) cls.push('disabled');
+  const node = el('div', cls.join(' '));
+  if (opts.showCost !== false){
+    node.appendChild(el('div', 'ccost', String(opts.cost != null ? opts.cost : c.cost)));
+  }
+  node.appendChild(el('div', 'cname', c.name));
+  node.appendChild(el('div', 'ctext', opts.text != null ? opts.text : c.text));
+  node.appendChild(el('div', 'ctag', CAT_LABEL[c.cat] + ' / ' + RARITY_LABEL[c.rarity]));
+  if (opts.onClick && !opts.disabled) node.addEventListener('click', () => opts.onClick(inst));
+  return node;
+}
+
+/** カードのグリッド表示 */
+function renderDeckList(cards, opts){
+  const grid = el('div', 'mr-grid');
+  for (const inst of cards) grid.appendChild(renderCardEl(inst, opts));
+  return grid;
+}
+
+function renderCores(cores){
+  const wrap = el('div', 'mr-cores');
+  for (const ex of EXERCISES){
+    const c = el('div', 'mr-core ' + ex.core);
+    c.appendChild(el('div', 'n', String(cores[ex.core] || 0)));
+    c.appendChild(el('div', 'l', ex.coreLabel));
+    wrap.appendChild(c);
+  }
+  return wrap;
+}
+
+/* --- タイトル --- */
+function renderTitle(){
+  const s = el('div', 'mr-screen');
+  const head = el('div', 'mr-center');
+  head.appendChild(el('h1', 'mr-title', '筋トレ融合<br>ローグライク'));
+  head.appendChild(el('p', 'mr-sub', 'その日の筋トレが、そのままデッキになる。'));
+  s.appendChild(head);
+
+  const panel = el('div', 'mr-panel');
+  panel.appendChild(el('div', 'mr-note', '所持している筋力コア'));
+  panel.appendChild(renderCores(G.meta.cores));
+  s.appendChild(panel);
+
+  if (G.run){
+    s.appendChild(btn('冒険を再開する', 'primary', () => go('MAP')));
+    s.appendChild(btn('ランを破棄して最初から', 'ghost', () => {
+      if (!confirm('進行中のランを破棄しますか?')) return;
+      G.run = null; saveGame(); render();
+    }));
+  } else {
+    s.appendChild(btn('ラン開始', 'primary', () => go('DIFFICULTY')));
+  }
+  s.appendChild(btn('強化所', '', () => go('META')));
+
+  s.appendChild(el('div', 'mr-spacer'));
+  const foot = el('div', 'mr-note mr-center');
+  foot.innerHTML = 'Phase 0 — 土台・データ定義・画面遷移・セーブ<br>'
+    + 'カード ' + Object.keys(CARDS).length + '種 / 敵 ' + Object.keys(ENEMIES).length + '種 / レリック '
+    + Object.keys(RELICS).length + '種';
+  s.appendChild(foot);
+  return s;
+}
+
+/* --- 未実装画面の受け皿 --- */
+const PLACEHOLDER_INFO = {
+  DIFFICULTY:   ['難易度選択',   'Phase 1 で実装'],
+  EXERCISE:     ['運動記録の入力','Phase 1 で実装'],
+  DECK_PREVIEW: ['デッキ確認',   'Phase 1 で実装'],
+  MAP:          ['マップ',       'Phase 5 で実装'],
+  BATTLE:       ['戦闘',         'Phase 2 で実装'],
+  REWARD:       ['戦闘報酬',     'Phase 6 で実装'],
+  SHOP:         ['ショップ',     'Phase 6 で実装'],
+  REST:         ['休憩所',       'Phase 6 で実装'],
+  EVENT:        ['イベント',     'Phase 6 で実装'],
+  TREASURE:     ['宝箱',         'Phase 6 で実装'],
+  META:         ['強化所',       'Phase 8 で実装'],
+  GAMEOVER:     ['敗北',         'Phase 6 で実装'],
+  VICTORY:      ['制覇',         'Phase 6 で実装'],
+};
+
+function renderPlaceholder(){
+  const info = PLACEHOLDER_INFO[G.screen] || [G.screen, ''];
+  const s = el('div', 'mr-screen');
+  const hud = renderHud();
+  const ph = el('div', 'mr-placeholder');
+  ph.appendChild(el('div', 'mr-title', info[0]));
+  ph.appendChild(el('div', 'mr-sub', info[1]));
+  s.appendChild(ph);
+  s.appendChild(btn('タイトルへ戻る', 'ghost', () => go('TITLE')));
+  return hud ? [hud, s] : s;
+}
+
+const RENDERERS = { TITLE: renderTitle };
+
+/* --- デバッグパネル --- */
+function renderDebugPanel(){
+  const p = el('div', 'mr-debug');
+  p.appendChild(el('div', 't', 'DEBUG'));
+  const sel = el('select');
+  sel.style.cssText = 'font:inherit;font-size:12px;background:#1e222c;color:#e8ecf2;border:1px solid #444;border-radius:5px;padding:3px';
+  for (const s of SCREENS){
+    const o = el('option'); o.value = s; o.textContent = s;
+    if (s === G.screen) o.selected = true;
+    sel.appendChild(o);
+  }
+  sel.addEventListener('change', () => go(sel.value));
+  p.appendChild(sel);
+  p.appendChild(btn('ダミーrun生成', 'small', () => {
+    G.run = makeDummyRun();
+    saveGame(); render();
+  }));
+  p.appendChild(btn('セーブ削除', 'small', () => { resetSave(); render(); }));
+  return p;
+}
+
+function makeDummyRun(){
+  const d = DIFFICULTY.NORMAL;
+  return {
+    difficulty: 'NORMAL',
+    hp: d.playerMaxHp, maxHp: d.playerMaxHp, gold: 99,
+    deck: STARTING_DECK.map(id => newCardInstance(id, false)),
+    relics: [], map: null, currentRow: -1, currentCol: null, visited: [],
+    exercise: { pushup:0, jumpSquat:0, twistLegRaise:0, plankSeconds:0 },
+    seenEvents: [], removeCost: 75,
+  };
+}
+
+
+/* ===== SECTION: BOOT ===== */
+function boot(){
+  loadGame();
+  // 復元した run のカード uid と採番カウンタが衝突しないようにする
+  if (G.run && Array.isArray(G.run.deck)){
+    for (const c of G.run.deck) if (c && c.uid >= _uid) _uid = c.uid + 1;
+  }
+  render();
+}
+boot();
+
+/* 開発用にグローバル公開(デバッグコンソールから触れるように) */
+window.MROG = { G, CARDS, ENEMIES, RELICS, DIFFICULTY, NODE_WEIGHTS, saveGame, loadGame, resetSave, go, render };
+</script>
+</body>
+</html>

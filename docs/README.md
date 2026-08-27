@@ -23,7 +23,7 @@
 | [0](phase-0-foundation.md) | 土台・データ定義・画面遷移・セーブ | タイトル→各画面のスケルトン遷移 |
 | [1](phase-1-exercise-input.md) | 運動入力 → デッキ生成、難易度選択 | 回数を入れると生成デッキ一覧が見られる |
 | [2](phase-2-battle-core.md) | 戦闘コア(ターン/Energy/Block/状態異常) | Basicカードだけで1戦闘が完結する |
-| [3](phase-3-cards.md) | 全36枚のカード効果・Power・Exhaust | 全カードが正しく機能する戦闘 |
+| [3](phase-3-cards.md) | 全37枚のカード効果・Power・Exhaust | 全カードが正しく機能する戦闘 |
 | [4](phase-4-enemies.md) | 敵AI・Intent表示・エリート・ボス | 通常敵/エリート/ボス戦が成立 |
 | [5](phase-5-map.md) | STS型分岐マップ生成と踏破 | マップを進んで戦闘が連続する |
 | [6](phase-6-nodes-rewards.md) | 報酬・ショップ・休憩・イベント・宝箱 | 1ランを最後まで通してクリアできる |
