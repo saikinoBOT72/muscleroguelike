@@ -286,6 +286,17 @@ body{
   10%,80%{opacity:1;transform:translate(-50%,0)}
   100%{opacity:0;transform:translate(-50%,-6px)}
 }
+
+/* 強化所 */
+.mr-tabs{display:flex;gap:5px}
+.mr-tab{
+  flex:1;font:inherit;font-size:12px;font-weight:600;padding:8px 4px;cursor:pointer;
+  background:var(--panel);color:var(--dim);border:1px solid var(--line);border-radius:8px;
+}
+.mr-tab.on{background:var(--panel2);color:var(--text);border-color:#4a5468}
+.mr-grow{flex:1;min-width:0;font-size:13px}
+.mr-panel.owned{opacity:.6}
+.mr-diffbtn.locked{opacity:.55;cursor:default}
 .mr-debug .t{font-size:10px;color:#c88;letter-spacing:.08em}
 </style>
 </head>
@@ -797,6 +808,80 @@ function effectiveCard(inst){
 }
 
 
+/* ===== SECTION: META(永続進行) ===== */
+const CAT_CORE = { ATTACK:'chest', SKILL:'leg', DEBUFF:'twist', POWER:'core' };
+const CORE_LABEL = { chest:'胸コア', leg:'脚コア', twist:'捻転コア', core:'体幹コア' };
+const UNLOCK_COST = { UNCOMMON:8, RARE:20 };
+const UPGRADE_BASIC_COST = 12;
+const RELIC_UNLOCK_COST = 15;
+
+/** 初期デッキに実際に入っている BASIC カード(強化差し替えの対象) */
+function upgradableBasics(){
+  const out = [];
+  for (const id of STARTING_DECK) if (out.indexOf(id) < 0) out.push(id);
+  return out;
+}
+
+function coreOf(cardId){ return CAT_CORE[CARDS[cardId].cat]; }
+function haveCore(key, n){ return (G.meta.cores[key] || 0) >= n; }
+function spendCore(key, n){ G.meta.cores[key] = (G.meta.cores[key] || 0) - n; }
+/** どのコアでも支払える購入用: 合計が足りるか */
+function totalCores(){
+  let t = 0;
+  for (const k in G.meta.cores) t += G.meta.cores[k];
+  return t;
+}
+/** 多いコアから順に n 個支払う */
+function spendAnyCore(n){
+  const keys = Object.keys(G.meta.cores).sort((a,b) => G.meta.cores[b] - G.meta.cores[a]);
+  let left = n;
+  for (const k of keys){
+    const take = Math.min(left, G.meta.cores[k]);
+    G.meta.cores[k] -= take;
+    left -= take;
+    if (left <= 0) break;
+  }
+}
+
+function unlockCard(id){
+  const c = CARDS[id];
+  const cost = UNLOCK_COST[c.rarity];
+  const key = coreOf(id);
+  if (!cost || !haveCore(key, cost) || G.meta.unlocked.indexOf(id) >= 0) return false;
+  spendCore(key, cost);
+  G.meta.unlocked.push(id);
+  saveGame();
+  return true;
+}
+function upgradeBasic(id){
+  if (G.meta.upgradedBasics.indexOf(id) >= 0) return false;
+  const key = coreOf(id);
+  if (!haveCore(key, UPGRADE_BASIC_COST)) return false;
+  spendCore(key, UPGRADE_BASIC_COST);
+  G.meta.upgradedBasics.push(id);
+  saveGame();
+  return true;
+}
+function unlockRelic(id){
+  if (STARTER_RELICS.indexOf(id) >= 0 || G.meta.unlockedRelics.indexOf(id) >= 0) return false;
+  if (totalCores() < RELIC_UNLOCK_COST) return false;
+  spendAnyCore(RELIC_UNLOCK_COST);
+  G.meta.unlockedRelics.push(id);
+  saveGame();
+  return true;
+}
+
+/** ラン終了時にコアを付与する(敗北時は50%没収) */
+function grantCores(cleared){
+  const result = endRun(cleared);
+  for (const r of result.rows) G.meta.cores[r.ex.core] = (G.meta.cores[r.ex.core] || 0) + r.got;
+  G.meta.lastPlayDate = new Date().toISOString().slice(0, 10);
+  saveGame();
+  return result;
+}
+
+function hardUnlocked(){ return !!G.meta.clearedNormal; }
+
 /* ===== SECTION: RUN (デッキ生成 / ラン開始) ===== */
 
 /** カード1種がアンロード済か。Phase 8 でメタ進行に接続する */
@@ -804,7 +889,7 @@ function isUnlocked(cardId){
   const c = CARDS[cardId];
   if (!c) return false;
   if (c.rarity === 'BASIC' || c.rarity === 'COMMON') return true;
-  return true; // TODO(Phase 8): G.meta.unlocked.includes(cardId) に置き換える
+  return G.meta.unlocked.indexOf(cardId) >= 0;
 }
 
 /** プランクの秒数を他種目と同じ「回数」に正規化する */
@@ -904,7 +989,8 @@ function startRun(draft){
     relics: [],
     map: generateMap(draft.difficulty), currentRow: -1, currentCol: null, visited: [],
     exercise: Object.assign({}, draft.exercise),
-    seenEvents: [], removeCost: 75
+    seenEvents: [], removeCost: 75,
+    kills: 0, pendingReward: null, tempEnergy: 0, coresGranted: false,
   };
   G.draft = null;
   saveGame();
@@ -926,7 +1012,8 @@ const RELIC_FAVOR = {
 
 /** 出現しうるレリック(Phase 8 でメタ進行に接続する) */
 function relicPool(){
-  return RELIC_LIST.map(r => r.id);   // TODO(Phase 8): STARTER_RELICS + G.meta.unlockedRelics
+  return RELIC_LIST.map(r => r.id)
+    .filter(id => STARTER_RELICS.indexOf(id) >= 0 || G.meta.unlockedRelics.indexOf(id) >= 0);
 }
 function ownedRelics(){ return G.run ? G.run.relics : []; }
 function availableRelics(){
@@ -2074,7 +2161,7 @@ function renderTitle(){
 
   s.appendChild(el('div', 'mr-spacer'));
   const foot = el('div', 'mr-note mr-center');
-  foot.innerHTML = 'Phase 7 — レリック<br>'
+  foot.innerHTML = 'Phase 8 — 永続進行<br>'
     + 'カード ' + Object.keys(CARDS).length + '種 / 敵 ' + Object.keys(ENEMIES).length + '種 / レリック '
     + Object.keys(RELICS).length + '種';
   s.appendChild(foot);
@@ -2122,15 +2209,22 @@ function renderDifficulty(){
     '休憩で最大HPの30%回復',
     '報酬 ×1.0'
   ]));
-  wrap.appendChild(makeDiffButton('HARD', 'hard', [
+  const hardBtn = makeDiffButton('HARD', 'hard', [
     '最大HP 60(-10)',
     '敵のHP・攻撃力 ×1.25',
     '敵は開始時から力を持つ(通常+1 / エリート・ボス+2)',
     'ボスが早く本気になる(HP60%で第2段階)',
     'エリートが出やすく、休憩は出にくい',
     '休憩の回復は最大HPの20%、ショップ価格 ×1.25',
-    '報酬(ゴールド・筋力コア) ×1.2'
-  ]));
+    '報酬(ゴールド・筋力コア) ×1.2',
+  ]);
+  if (!hardUnlocked()){
+    hardBtn.disabled = true;
+    hardBtn.classList.add('locked');
+    hardBtn.querySelector('.dn').innerHTML = '🔒 むずい';
+    hardBtn.appendChild(el('div', 'mr-locked', '「ふつう」を1回クリアすると解放されます'));
+  }
+  wrap.appendChild(hardBtn);
   s.appendChild(wrap);
 
   s.appendChild(el('div', 'mr-spacer'));
@@ -2141,6 +2235,7 @@ function renderDifficulty(){
 function makeDiffButton(key, cls, lines){
   const d = DIFFICULTY[key];
   const b = el('button', 'mr-diffbtn ' + cls);
+  b.type = 'button';
   b.appendChild(el('div', 'dn', (key === 'HARD' ? '🔥 ' : '🟦 ') + d.label));
   b.appendChild(el('div', 'dd', lines.map(l => '・' + l).join('<br>')));
   b.addEventListener('click', () => {
@@ -2868,6 +2963,7 @@ const DEFEAT_MESSAGES = [
 
 function renderRunEnd(cleared){
   const run = G.run;
+  if (!run.coresGranted){ run.coresGranted = true; grantCores(cleared); }   // 付与は1回だけ
   const result = endRun(cleared);
   const s = el('div', 'mr-screen');
   const scroll = el('div', 'mr-scroll');
@@ -2898,7 +2994,8 @@ function renderRunEnd(cleared){
   }
   t.appendChild(tb);
   cp.appendChild(t);
-  cp.appendChild(el('div', 'mr-note', '※ 付与は Phase 8(永続進行)で実装'));
+  cp.appendChild(el('div', 'mr-note', '所持: '
+    + EXERCISES.map(ex => CORE_LABEL[ex.core] + ' ' + G.meta.cores[ex.core]).join(' / ')));
   scroll.appendChild(cp);
 
   // 最終デッキ
@@ -3012,6 +3109,140 @@ function renderMap(){
   return [renderHud(), s];
 }
 
+/* --- 強化所 --- */
+let metaTab = 'cards';
+
+function renderMeta(){
+  const s = el('div', 'mr-screen');
+  s.appendChild(el('h2', 'mr-title', '強化所'));
+  s.appendChild(renderCores(G.meta.cores));
+
+  const tabs = el('div', 'mr-tabs');
+  const defs = [
+    ['cards',   'カード開放'],
+    ['basics',  '初期デッキ'],
+    ['relics',  'レリック'],
+    ['diff',    '難易度'],
+  ];
+  for (const [key, label] of defs){
+    const t = el('button', 'mr-tab' + (metaTab === key ? ' on' : ''), label);
+    t.addEventListener('click', () => { metaTab = key; render(); });
+    tabs.appendChild(t);
+  }
+  s.appendChild(tabs);
+
+  const scroll = el('div', 'mr-scroll');
+  if (metaTab === 'cards')  renderMetaCards(scroll);
+  if (metaTab === 'basics') renderMetaBasics(scroll);
+  if (metaTab === 'relics') renderMetaRelics(scroll);
+  if (metaTab === 'diff')   renderMetaDifficulty(scroll);
+  s.appendChild(scroll);
+
+  const foot = el('div', 'mr-sticky');
+  foot.appendChild(btn('タイトルへ戻る', 'primary', () => go('TITLE')));
+  if (DEBUG) foot.appendChild(btn('メタ進行をリセット(デバッグ)', 'ghost', () => {
+    if (!confirm('永続進行を全て消しますか?')) return;
+    G.meta = newMeta(); saveGame(); render();
+  }));
+  s.appendChild(foot);
+  return s;
+}
+
+function buyRow(label, sub, costText, canBuy, owned, onBuy){
+  const row = el('div', 'mr-panel mr-row' + (owned ? ' owned' : ''));
+  row.appendChild(el('div', 'mr-grow', label + (sub ? '<br><span class="mr-note">' + sub + '</span>' : '')));
+  if (owned){
+    row.appendChild(el('span', 'mr-badge', '開放済'));
+  } else {
+    const b = btn(costText, 'small' + (canBuy ? ' primary' : ''), () => {
+      if (!canBuy) return;
+      if (!confirm(costText + ' を支払います。取り消しはできません。よろしいですか?')) return;
+      onBuy(); render();
+    });
+    b.disabled = !canBuy;
+    row.appendChild(b);
+  }
+  return row;
+}
+
+function renderMetaCards(scroll){
+  scroll.appendChild(el('div', 'mr-note',
+    'UNCOMMON / RARE のカードは、開放するまでデッキ生成にも報酬にもショップにも出ません。'
+    + 'COMMON と基本カードは最初から使えます。'));
+  for (const cat of CATEGORIES){
+    const coreKey = CAT_CORE[cat];
+    const head = el('div', 'mr-cathead ' + cat);
+    head.innerHTML = '<span>' + CAT_NAME[cat] + '(' + CAT_LABEL[cat] + ') — '
+      + CORE_LABEL[coreKey] + ' ' + G.meta.cores[coreKey] + '</span><span class="bar"></span>';
+    scroll.appendChild(head);
+    for (const c of CARD_LIST){
+      if (c.cat !== cat || !UNLOCK_COST[c.rarity]) continue;
+      const cost = UNLOCK_COST[c.rarity];
+      const owned = G.meta.unlocked.indexOf(c.id) >= 0;
+      const can = haveCore(coreKey, cost);
+      scroll.appendChild(buyRow(
+        '<b>' + c.name + '</b> <span class="mr-badge">' + RARITY_LABEL[c.rarity] + '</span>',
+        'コスト' + c.cost + ' / ' + cardDisplayText({ uid:-1, id:c.id, upgraded:false }, null),
+        CORE_LABEL[coreKey] + ' ' + cost, can, owned,
+        () => unlockCard(c.id)));
+    }
+  }
+}
+
+function renderMetaBasics(scroll){
+  scroll.appendChild(el('div', 'mr-note',
+    '初期デッキの基本カードを、以降の全てのランで恒久的に強化(+)版に差し替えます。'));
+  for (const id of upgradableBasics()){
+    const c = CARDS[id];
+    const coreKey = CAT_CORE[c.cat];
+    const owned = G.meta.upgradedBasics.indexOf(id) >= 0;
+    const can = haveCore(coreKey, UPGRADE_BASIC_COST);
+    const n = STARTING_DECK.filter(x => x === id).length;
+    scroll.appendChild(buyRow(
+      '<b>' + c.name + '</b> ×' + n,
+      cardDisplayText({ uid:-1, id:id, upgraded:false }, null)
+        + ' → <span style="color:var(--rare)">' + cardDisplayText({ uid:-1, id:id, upgraded:true }, null) + '</span>',
+      CORE_LABEL[coreKey] + ' ' + UPGRADE_BASIC_COST, can, owned,
+      () => upgradeBasic(id)));
+  }
+}
+
+function renderMetaRelics(scroll){
+  scroll.appendChild(el('div', 'mr-note',
+    '開放したレリックが宝箱・ショップ・エリート報酬に出現するようになります。'
+    + 'コストはどのコアからでも支払えます(合計 ' + totalCores() + ' 個所持)。'));
+  for (const r of RELIC_LIST){
+    const starter = STARTER_RELICS.indexOf(r.id) >= 0;
+    const owned = starter || G.meta.unlockedRelics.indexOf(r.id) >= 0;
+    scroll.appendChild(buyRow(
+      r.icon + ' <b>' + r.name + '</b>' + (starter ? ' <span class="mr-badge">初期</span>' : ''),
+      r.desc,
+      '任意のコア ' + RELIC_UNLOCK_COST, totalCores() >= RELIC_UNLOCK_COST, owned,
+      () => unlockRelic(r.id)));
+  }
+}
+
+function renderMetaDifficulty(scroll){
+  const rows = [
+    ['🟦 ふつう', '最初から遊べます', true, ''],
+    ['🔥 むずい', DIFFICULTY.HARD.label + ' — 敵HP・攻撃力 ×1.25 ほか。報酬 ×1.2',
+     hardUnlocked(), '「ふつう」を1回クリアすると解放'],
+  ];
+  for (const [name, desc, open, cond] of rows){
+    const row = el('div', 'mr-panel');
+    row.innerHTML = '<b>' + (open ? name : '🔒 ' + name.replace(/^\S+\s/, '')) + '</b>'
+      + '<br><span class="mr-note">' + desc + '</span>'
+      + (open ? '' : '<br><span class="mr-locked">' + cond + '</span>');
+    scroll.appendChild(row);
+  }
+  const st = el('div', 'mr-panel');
+  st.innerHTML = '<div class="mr-note">実績</div>'
+    + 'ふつう クリア: <b>' + (G.meta.clearedNormal ? '達成' : '未達成') + '</b><br>'
+    + 'むずい クリア: <b>' + (G.meta.clearedHard ? '達成' : '未達成') + '</b>'
+    + (G.meta.lastPlayDate ? '<br><span class="mr-note">最終プレイ: ' + G.meta.lastPlayDate + '</span>' : '');
+  scroll.appendChild(st);
+}
+
 const RENDERERS = {
   TITLE: renderTitle,
   DIFFICULTY: renderDifficulty,
@@ -3026,6 +3257,7 @@ const RENDERERS = {
   REST:     renderRest,
   EVENT:    renderEvent,
   TREASURE: renderTreasure,
+  META:     renderMeta,
 };
 
 // 画面と描画関数の対応漏れを起動時に検出する
@@ -3122,6 +3354,8 @@ window.MROG = { G, CARDS, CARD_LIST, ENEMIES, RELICS, DIFFICULTY, NODE_WEIGHTS,
   makeReward, pickRewardCards, makeShopStock, makeTreasure, EVENTS, pickEvent,
   endRun, relicPool, availableRelics, rollRelic, gainRelic, upgradableCards, PRICE,
   fireRelicHook, cardCost, RELIC_LIST,
+  isUnlocked, unlockCard, upgradeBasic, unlockRelic, grantCores, hardUnlocked,
+  UNLOCK_COST, UPGRADE_BASIC_COST, RELIC_UNLOCK_COST, upgradableBasics, CAT_CORE, totalCores,
   get battle(){ return G.battle; } };
 </script>
 </body>
