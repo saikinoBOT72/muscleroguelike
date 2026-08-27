@@ -260,163 +260,155 @@ const DEBUG = new URLSearchParams(location.search).get('debug') === '1';
 const CARD_LIST = [
 /* --- ATTACK(腕立て伏せ / 胸コア) --- */
 { id:'atk_punch', name:'パンチ', cat:'ATTACK', rarity:'BASIC', cost:1, type:'attack', target:'single',
-  effects:[{type:'damage',value:6}], text:'6ダメージ',
-  up:{ effects:[{type:'damage',value:9}], text:'9ダメージ' } },
+  effects:[{type:'damage',value:6}],
+  up:{ effects:[{type:'damage',value:9}] } },
 
 { id:'atk_double_punch', name:'ダブルパンチ', cat:'ATTACK', rarity:'BASIC', cost:1, type:'attack', target:'single',
-  effects:[{type:'damageMulti',value:3,times:2}], text:'3ダメージ×2回',
-  up:{ effects:[{type:'damageMulti',value:4,times:2}], text:'4ダメージ×2回' } },
+  effects:[{type:'damageMulti',value:3,times:2}],
+  up:{ effects:[{type:'damageMulti',value:4,times:2}] } },
 
 { id:'atk_body_blow', name:'ボディブロー', cat:'ATTACK', rarity:'COMMON', cost:1, type:'attack', target:'single',
-  effects:[{type:'damage',value:8}], text:'8ダメージ',
-  up:{ effects:[{type:'damage',value:11}], text:'11ダメージ' } },
+  effects:[{type:'damage',value:8}],
+  up:{ effects:[{type:'damage',value:11}] } },
 
 { id:'atk_hook', name:'フック', cat:'ATTACK', rarity:'COMMON', cost:1, type:'attack', target:'single',
-  effects:[{type:'damage',value:10}], text:'10ダメージ',
-  up:{ effects:[{type:'damage',value:14}], text:'14ダメージ' } },
+  effects:[{type:'damage',value:10}],
+  up:{ effects:[{type:'damage',value:14}] } },
 
 { id:'atk_rush', name:'ラッシュ', cat:'ATTACK', rarity:'COMMON', cost:2, type:'attack', target:'single',
-  effects:[{type:'damageMulti',value:6,times:2}], text:'6ダメージ×2回',
-  up:{ effects:[{type:'damageMulti',value:8,times:2}], text:'8ダメージ×2回' } },
+  effects:[{type:'damageMulti',value:6,times:2}],
+  up:{ effects:[{type:'damageMulti',value:8,times:2}] } },
 
 { id:'atk_uppercut', name:'アッパーカット', cat:'ATTACK', rarity:'UNCOMMON', cost:2, type:'attack', target:'single',
-  effects:[{type:'damage',value:12},{type:'status',key:'weak',value:1}], text:'12ダメージ 弱体1',
-  up:{ effects:[{type:'damage',value:16},{type:'status',key:'weak',value:2}], text:'16ダメージ 弱体2' } },
+  effects:[{type:'damage',value:12},{type:'status',key:'weak',value:1}],
+  up:{ effects:[{type:'damage',value:16},{type:'status',key:'weak',value:2}] } },
 
 { id:'atk_barrage', name:'連続殴打', cat:'ATTACK', rarity:'UNCOMMON', cost:2, type:'attack', target:'single',
-  effects:[{type:'damageMulti',value:5,times:3}], text:'5ダメージ×3回',
-  up:{ effects:[{type:'damageMulti',value:7,times:3}], text:'7ダメージ×3回' } },
+  effects:[{type:'damageMulti',value:5,times:3}],
+  up:{ effects:[{type:'damageMulti',value:7,times:3}] } },
 
 { id:'atk_heavy_blow', name:'ヘビーブロー', cat:'ATTACK', rarity:'UNCOMMON', cost:2, type:'attack', target:'single',
-  exhaust:true, effects:[{type:'damage',value:14}], text:'14ダメージ 除外',
-  up:{ effects:[{type:'damage',value:18}], text:'18ダメージ 除外' } },
+  exhaust:true, effects:[{type:'damage',value:14}],
+  up:{ effects:[{type:'damage',value:18}] } },
 
 { id:'atk_finish_blow', name:'フィニッシュブロー', cat:'ATTACK', rarity:'RARE', cost:3, type:'attack', target:'single',
   effects:[{type:'damagePerAttackPlayed',base:8,per:4}],
-  text:'8ダメージ+このターンに使ったATTACK1枚につき+4',
-  up:{ effects:[{type:'damagePerAttackPlayed',base:12,per:6}],
-       text:'12ダメージ+このターンに使ったATTACK1枚につき+6' } },
+  up:{ effects:[{type:'damagePerAttackPlayed',base:12,per:6}] } },
 
 { id:'atk_fist_dance', name:'拳打乱舞', cat:'ATTACK', rarity:'RARE', cost:1, type:'attack', target:'single',
   effects:[{type:'damagePerAttackInHand',base:4,per:2}],
-  text:'4ダメージ+手札のATTACK1枚につき+2',
-  up:{ effects:[{type:'damagePerAttackInHand',base:6,per:3}],
-       text:'6ダメージ+手札のATTACK1枚につき+3' } },
+  up:{ effects:[{type:'damagePerAttackInHand',base:6,per:3}] } },
 
 /* --- SKILL(ジャンプスクワット / 脚コア) --- */
 { id:'skl_sidestep', name:'サイドステップ', cat:'SKILL', rarity:'BASIC', cost:0, type:'skill', target:'self',
-  effects:[{type:'evade',value:1}], text:'次に受ける攻撃1回を無効化',
-  up:{ effects:[{type:'evade',value:2}], text:'次に受ける攻撃2回を無効化' } },
+  effects:[{type:'evade',value:1}],
+  up:{ effects:[{type:'evade',value:2}] } },
 
 { id:'skl_dash', name:'ダッシュ', cat:'SKILL', rarity:'BASIC', cost:1, type:'skill', target:'self',
-  effects:[{type:'draw',value:1}], text:'カードを1枚引く',
-  up:{ effects:[{type:'draw',value:2}], text:'カードを2枚引く' } },
+  effects:[{type:'draw',value:1}],
+  up:{ effects:[{type:'draw',value:2}] } },
 
 { id:'skl_footwork', name:'フットワーク', cat:'SKILL', rarity:'COMMON', cost:1, type:'skill', target:'self',
-  exhaust:true, effects:[{type:'energy',value:1}], text:'Energy+1 除外',
-  up:{ exhaust:false, effects:[{type:'energy',value:1}], text:'Energy+1' } },
+  exhaust:true, effects:[{type:'energy',value:1}],
+  up:{ exhaust:false, effects:[{type:'energy',value:1}] } },
 
 { id:'skl_agility', name:'俊敏', cat:'SKILL', rarity:'COMMON', cost:1, type:'skill', target:'self',
-  effects:[{type:'draw',value:2}], text:'カードを2枚引く',
-  up:{ effects:[{type:'draw',value:3}], text:'カードを3枚引く' } },
+  effects:[{type:'draw',value:2}],
+  up:{ effects:[{type:'draw',value:3}] } },
 
 { id:'skl_backstep', name:'バックステップ', cat:'SKILL', rarity:'COMMON', cost:1, type:'skill', target:'self',
-  effects:[{type:'block',value:8}], text:'ブロック8',
-  up:{ effects:[{type:'block',value:11}], text:'ブロック11' } },
+  effects:[{type:'block',value:8}],
+  up:{ effects:[{type:'block',value:11}] } },
 
 { id:'skl_double_jump', name:'二段跳び', cat:'SKILL', rarity:'UNCOMMON', cost:1, type:'skill', target:'self',
-  effects:[{type:'energy',value:1},{type:'draw',value:1}], text:'Energy+1 カードを1枚引く',
-  up:{ effects:[{type:'energy',value:1},{type:'draw',value:2}], text:'Energy+1 カードを2枚引く' } },
+  effects:[{type:'energy',value:1},{type:'draw',value:1}],
+  up:{ effects:[{type:'energy',value:1},{type:'draw',value:2}] } },
 
 { id:'skl_counter_stance', name:'カウンター体勢', cat:'SKILL', rarity:'UNCOMMON', cost:1, type:'skill', target:'self',
-  effects:[{type:'counter',value:5}], text:'このターン攻撃を受けたら5ダメージ反撃(1回)',
-  up:{ effects:[{type:'counter',value:8}], text:'このターン攻撃を受けたら8ダメージ反撃(1回)' } },
+  effects:[{type:'counter',value:5}],
+  up:{ effects:[{type:'counter',value:8}] } },
 
 { id:'skl_sprint', name:'疾走', cat:'SKILL', rarity:'RARE', cost:0, type:'skill', target:'self',
-  exhaust:true, effects:[{type:'draw',value:2}], text:'カードを2枚引く 除外',
-  up:{ exhaust:false, effects:[{type:'draw',value:2}], text:'カードを2枚引く' } },
+  exhaust:true, effects:[{type:'draw',value:2}],
+  up:{ exhaust:false, effects:[{type:'draw',value:2}] } },
 
 { id:'skl_lightning', name:'電光石火', cat:'SKILL', rarity:'RARE', cost:1, type:'skill', target:'self',
-  exhaust:true, effects:[{type:'energy',value:2},{type:'draw',value:2}], text:'Energy+2 カードを2枚引く 除外',
-  up:{ effects:[{type:'energy',value:3},{type:'draw',value:2}], text:'Energy+3 カードを2枚引く 除外' } },
+  exhaust:true, effects:[{type:'energy',value:2},{type:'draw',value:2}],
+  up:{ effects:[{type:'energy',value:3},{type:'draw',value:2}] } },
 
 /* --- DEBUFF(ツイストレッグレイズ / 捻転コア) --- */
 { id:'dbf_feint', name:'フェイント', cat:'DEBUFF', rarity:'BASIC', cost:1, type:'skill', target:'single',
-  effects:[{type:'status',key:'weak',value:1}], text:'弱体1を付与',
-  up:{ effects:[{type:'status',key:'weak',value:2}], text:'弱体2を付与' } },
+  effects:[{type:'status',key:'weak',value:1}],
+  up:{ effects:[{type:'status',key:'weak',value:2}] } },
 
 { id:'dbf_sharp_gaze', name:'鋭い視線', cat:'DEBUFF', rarity:'BASIC', cost:1, type:'skill', target:'single',
-  effects:[{type:'status',key:'vulnerable',value:1}], text:'脆弱1を付与',
-  up:{ effects:[{type:'status',key:'vulnerable',value:2}], text:'脆弱2を付与' } },
+  effects:[{type:'status',key:'vulnerable',value:1}],
+  up:{ effects:[{type:'status',key:'vulnerable',value:2}] } },
 
 { id:'dbf_bleed_strike', name:'出血の一撃', cat:'DEBUFF', rarity:'COMMON', cost:1, type:'skill', target:'single',
-  effects:[{type:'damage',value:4},{type:'status',key:'bleed',value:2}], text:'4ダメージ 出血2',
-  up:{ effects:[{type:'damage',value:6},{type:'status',key:'bleed',value:3}], text:'6ダメージ 出血3' } },
+  effects:[{type:'damage',value:4},{type:'status',key:'bleed',value:2}],
+  up:{ effects:[{type:'damage',value:6},{type:'status',key:'bleed',value:3}] } },
 
 { id:'dbf_weaken_form', name:'弱体化の型', cat:'DEBUFF', rarity:'COMMON', cost:1, type:'skill', target:'all',
-  effects:[{type:'status',key:'weak',value:1}], text:'敵全体に弱体1',
-  up:{ effects:[{type:'status',key:'weak',value:2}], text:'敵全体に弱体2' } },
+  effects:[{type:'status',key:'weak',value:1}],
+  up:{ effects:[{type:'status',key:'weak',value:2}] } },
 
 { id:'dbf_taunt', name:'挑発', cat:'DEBUFF', rarity:'COMMON', cost:1, type:'skill', target:'all',
-  effects:[{type:'status',key:'vulnerable',value:1}], text:'敵全体に脆弱1',
-  up:{ effects:[{type:'status',key:'vulnerable',value:2}], text:'敵全体に脆弱2' } },
+  effects:[{type:'status',key:'vulnerable',value:1}],
+  up:{ effects:[{type:'status',key:'vulnerable',value:2}] } },
 
 { id:'dbf_curse', name:'呪縛', cat:'DEBUFF', rarity:'UNCOMMON', cost:1, type:'skill', target:'single',
-  effects:[{type:'status',key:'weak',value:2},{type:'status',key:'vulnerable',value:1}], text:'弱体2 脆弱1',
-  up:{ effects:[{type:'status',key:'weak',value:2},{type:'status',key:'vulnerable',value:2}], text:'弱体2 脆弱2' } },
+  effects:[{type:'status',key:'weak',value:2},{type:'status',key:'vulnerable',value:1}],
+  up:{ effects:[{type:'status',key:'weak',value:2},{type:'status',key:'vulnerable',value:2}] } },
 
 { id:'dbf_finishing_thrust', name:'トドメの一突き', cat:'DEBUFF', rarity:'UNCOMMON', cost:2, type:'skill', target:'single',
   effects:[{type:'damage',value:8},{type:'status',key:'bleed',value:3},{type:'status',key:'vulnerable',value:1}],
-  text:'8ダメージ 出血3 脆弱1',
-  up:{ effects:[{type:'damage',value:10},{type:'status',key:'bleed',value:4},{type:'status',key:'vulnerable',value:2}],
-       text:'10ダメージ 出血4 脆弱2' } },
+  up:{ effects:[{type:'damage',value:10},{type:'status',key:'bleed',value:4},{type:'status',key:'vulnerable',value:2}] } },
 
 { id:'dbf_mass_break', name:'全体崩し', cat:'DEBUFF', rarity:'RARE', cost:2, type:'skill', target:'all',
-  effects:[{type:'status',key:'vulnerable',value:2},{type:'status',key:'weak',value:2}], text:'敵全体に脆弱2 弱体2',
-  up:{ effects:[{type:'status',key:'vulnerable',value:3},{type:'status',key:'weak',value:3}], text:'敵全体に脆弱3 弱体3' } },
+  effects:[{type:'status',key:'vulnerable',value:2},{type:'status',key:'weak',value:2}],
+  up:{ effects:[{type:'status',key:'vulnerable',value:3},{type:'status',key:'weak',value:3}] } },
 
 { id:'dbf_erode', name:'蝕む一撃', cat:'DEBUFF', rarity:'RARE', cost:1, type:'skill', target:'single',
-  effects:[{type:'damage',value:2},{type:'status',key:'bleed',value:5}], text:'2ダメージ 出血5',
-  up:{ effects:[{type:'damage',value:2},{type:'status',key:'bleed',value:7}], text:'2ダメージ 出血7' } },
+  effects:[{type:'damage',value:2},{type:'status',key:'bleed',value:5}],
+  up:{ effects:[{type:'damage',value:2},{type:'status',key:'bleed',value:7}] } },
 
 /* --- POWER(プランク / 体幹コア) --- */
 { id:'pwr_guard', name:'ガード', cat:'POWER', rarity:'BASIC', cost:1, type:'power', target:'self',
-  effects:[{type:'block',value:7}], text:'ブロック7',
-  up:{ effects:[{type:'block',value:10}], text:'ブロック10' } },
+  effects:[{type:'block',value:7}],
+  up:{ effects:[{type:'block',value:10}] } },
 
 { id:'pwr_brace', name:'踏ん張り', cat:'POWER', rarity:'BASIC', cost:1, type:'power', target:'self',
   effects:[{type:'block',value:5},{type:'blockPerTurn',value:2,turns:2}],
-  text:'ブロック5 2ターンの間ターン開始時ブロック2',
-  up:{ effects:[{type:'block',value:5},{type:'blockPerTurn',value:3,turns:3}],
-       text:'ブロック5 3ターンの間ターン開始時ブロック3' } },
+  up:{ effects:[{type:'block',value:5},{type:'blockPerTurn',value:3,turns:3}] } },
 
 { id:'pwr_iron_stance', name:'鉄壁の構え', cat:'POWER', rarity:'COMMON', cost:2, type:'power', target:'self',
-  effects:[{type:'block',value:12}], text:'ブロック12',
-  up:{ effects:[{type:'block',value:16}], text:'ブロック16' } },
+  effects:[{type:'block',value:12}],
+  up:{ effects:[{type:'block',value:16}] } },
 
 { id:'pwr_repel', name:'反発', cat:'POWER', rarity:'COMMON', cost:1, type:'power', target:'self',
-  effects:[{type:'block',value:6},{type:'reflect'}], text:'ブロック6 ターン終了時に残ブロック分を敵全体に反射',
-  up:{ effects:[{type:'block',value:9},{type:'reflect'}], text:'ブロック9 ターン終了時に残ブロック分を敵全体に反射' } },
+  effects:[{type:'block',value:6},{type:'reflect'}],
+  up:{ effects:[{type:'block',value:9},{type:'reflect'}] } },
 
 { id:'pwr_lasting_strength', name:'継続する強さ', cat:'POWER', rarity:'COMMON', cost:1, type:'power', target:'self',
-  keep:true, effects:[{type:'blockPerTurn',value:3,turns:0}], text:'【Power】毎ターン開始時ブロック3',
-  up:{ effects:[{type:'blockPerTurn',value:4,turns:0}], text:'【Power】毎ターン開始時ブロック4' } },
+  keep:true, effects:[{type:'blockPerTurn',value:3,turns:0}],
+  up:{ effects:[{type:'blockPerTurn',value:4,turns:0}] } },
 
 { id:'pwr_endurance', name:'忍耐', cat:'POWER', rarity:'UNCOMMON', cost:1, type:'power', target:'self',
-  keep:true, effects:[{type:'blockOnPower',value:2}], text:'【Power】POWERカードを使うたびブロック2',
-  up:{ effects:[{type:'blockOnPower',value:3}], text:'【Power】POWERカードを使うたびブロック3' } },
+  keep:true, effects:[{type:'blockOnPower',value:2}],
+  up:{ effects:[{type:'blockOnPower',value:3}] } },
 
 { id:'pwr_immovable', name:'不動の心', cat:'POWER', rarity:'UNCOMMON', cost:2, type:'power', target:'self',
-  keep:true, effects:[{type:'strength',value:2}], text:'【Power】力+2',
-  up:{ effects:[{type:'strength',value:3}], text:'【Power】力+3' } },
+  keep:true, effects:[{type:'strength',value:2}],
+  up:{ effects:[{type:'strength',value:3}] } },
 
 { id:'pwr_perfect_defense', name:'完全防御', cat:'POWER', rarity:'RARE', cost:2, type:'power', target:'self',
-  keep:true, effects:[{type:'blockBonus',value:2}], text:'【Power】ブロックを得るたび追加で+2',
-  up:{ effects:[{type:'blockBonus',value:3}], text:'【Power】ブロックを得るたび追加で+3' } },
+  keep:true, effects:[{type:'blockBonus',value:2}],
+  up:{ effects:[{type:'blockBonus',value:3}] } },
 
 { id:'pwr_diamond_stance', name:'金剛の構え', cat:'POWER', rarity:'RARE', cost:3, type:'power', target:'self',
-  effects:[{type:'block',value:20},{type:'keepBlock'}], text:'ブロック20 以降ブロックがターン終了時に消滅しない',
-  up:{ effects:[{type:'block',value:25},{type:'keepBlock'}], text:'ブロック25 以降ブロックがターン終了時に消滅しない' } },
+  effects:[{type:'block',value:20},{type:'keepBlock'}],
+  up:{ effects:[{type:'block',value:25},{type:'keepBlock'}] } }
 ];
 
 const CARDS = {};
@@ -436,7 +428,7 @@ const EXERCISES = [
   { key:'pushup',        label:'腕立て伏せ',          unit:'回', cat:'ATTACK', core:'chest', coreLabel:'胸コア' },
   { key:'jumpSquat',     label:'ジャンプスクワット',  unit:'回', cat:'SKILL',  core:'leg',   coreLabel:'脚コア' },
   { key:'twistLegRaise', label:'ツイストレッグレイズ',unit:'回', cat:'DEBUFF', core:'twist', coreLabel:'捻転コア' },
-  { key:'plankSeconds',  label:'プランク',            unit:'秒', cat:'POWER',  core:'core',  coreLabel:'体幹コア' },
+  { key:'plankSeconds',  label:'プランク',            unit:'秒', cat:'POWER',  core:'core',  coreLabel:'体幹コア' }
 ];
 /** プランクの秒数→カウント換算(確定事項: 2秒 = 1カウント) */
 const PLANK_SECONDS_PER_COUNT = 2;
@@ -450,35 +442,35 @@ const ENEMY_LIST = [
 { id:'slime_fake', name:'スライムモドキ', tier:'NORMAL', hpMin:18, hpMax:22,
   phases:[{ hpThreshold:1.0, loop:true, pattern:[
     { intent:'attack', value:6 },
-    { intent:'attack', value:6, status:{weak:1} },
+    { intent:'attack', value:6, status:{weak:1} }
   ]}]},
 
 { id:'spike_rat', name:'トゲネズミ', tier:'NORMAL', hpMin:12, hpMax:15,
   phases:[{ hpThreshold:1.0, loop:true, pattern:[
-    { intent:'attack', value:4, times:2 },
+    { intent:'attack', value:4, times:2 }
   ]}]},
 
 { id:'wander_golem', name:'徘徊ゴーレム', tier:'NORMAL', hpMin:25, hpMax:30,
   phases:[{ hpThreshold:1.0, loop:true, pattern:[
     { intent:'attack', value:10 },
-    { intent:'block',  value:8 },
+    { intent:'block',  value:8 }
   ]}]},
 
 { id:'bat_swarm', name:'コウモリの群れ', tier:'NORMAL', hpMin:15, hpMax:18,
   phases:[{ hpThreshold:1.0, loop:true, pattern:[
-    { intent:'attack', value:3, times:3 },
+    { intent:'attack', value:3, times:3 }
   ]}]},
 
 { id:'shadow_scout', name:'影の斥候', tier:'NORMAL', hpMin:20, hpMax:24,
   phases:[{ hpThreshold:1.0, weighted:true, pattern:[
     { v:{ intent:'attack', value:8 }, w:70 },
-    { v:{ intent:'heal',   value:5 }, w:30 },
+    { v:{ intent:'heal',   value:5 }, w:30 }
   ]}]},
 
 { id:'elite_heavy_soldier', name:'重装兵', tier:'ELITE', hpMin:45, hpMax:45,
   phases:[{ hpThreshold:1.0, loop:true, pattern:[
     { intent:'attack', value:12 },
-    { intent:'block',  value:15, strength:2 },
+    { intent:'block',  value:15, strength:2 }
   ]}]},
 
 /* 双子の影は2体で1組。ENCOUNTERS 側で a/b を並べる(Phase 4) */
@@ -486,7 +478,7 @@ const ENEMY_LIST = [
   twin:true, startPatternIdx:0,
   phases:[{ hpThreshold:1.0, loop:true, pattern:[
     { intent:'attack', value:6 },
-    { intent:'debuff', status:{vulnerable:1} },
+    { intent:'debuff', status:{vulnerable:1} }
   ]}],
   onAllyDeath(e){ e.status.strength += 3; return e.name + 'が怒りに震えた! 力+3'; } },
 
@@ -494,7 +486,7 @@ const ENEMY_LIST = [
   twin:true, startPatternIdx:1,
   phases:[{ hpThreshold:1.0, loop:true, pattern:[
     { intent:'attack', value:6 },
-    { intent:'debuff', status:{vulnerable:1} },
+    { intent:'debuff', status:{vulnerable:1} }
   ]}],
   onAllyDeath(e){ e.status.strength += 3; return e.name + 'が怒りに震えた! 力+3'; } },
 
@@ -502,15 +494,15 @@ const ENEMY_LIST = [
   phases:[
     { hpThreshold:1.0, loop:true, pattern:[
       { intent:'debuff', status:{vulnerable:1} },
-      { intent:'attack', value:14 },
+      { intent:'attack', value:14 }
     ]},
     { hpThreshold:'bossPhase2', loop:true,
       onEnter(e){ e.enraged = true; return '過負荷の番人が暴走した!'; },
       pattern:[
         { intent:'attack', value:18 },
         { intent:'attack', value:18 },
-        { intent:'attack', value:18, heal:10 },
-      ]},
+        { intent:'attack', value:18, heal:10 }
+      ]}
   ]},
 
 { id:'boss_sloth_colossus', name:'怠惰の巨像', tier:'BOSS', hpMin:90, hpMax:90,
@@ -519,8 +511,8 @@ const ENEMY_LIST = [
     { hpThreshold:1.0, loop:true, pattern:[ { intent:'attack', value:8 } ]},
     { hpThreshold:'bossPhase2', loop:true,
       onEnter(e){ e.status.strength += 3; e.enraged = true; return '怠惰の巨像が目を覚ました! 力+3'; },
-      pattern:[ { intent:'attack', value:8 } ]},
-  ]},
+      pattern:[ { intent:'attack', value:8 } ]}
+  ]}
 ];
 
 const ENEMIES = {};
@@ -533,7 +525,7 @@ const RELIC_LIST = [
 { id:'rel_accelerator',       name:'加速装置',       icon:'⚡', desc:'戦闘の最初のターンのみ Energy+1' },
 { id:'rel_grudge_record',     name:'執念の記録',     icon:'📕', desc:'出血によるダメージ+50%' },
 { id:'rel_battle_wisdom',     name:'継戦の心得',     icon:'📜', desc:'POWERカードのコスト-1(最低0)' },
-{ id:'rel_sweat_crystal',     name:'汗の結晶',       icon:'💧', desc:'戦闘勝利時、ゴールド+10' },
+{ id:'rel_sweat_crystal',     name:'汗の結晶',       icon:'💧', desc:'戦闘勝利時、ゴールド+10' }
 ];
 const RELICS = {};
 for (const r of RELIC_LIST) RELICS[r.id] = r;
@@ -552,7 +544,7 @@ const DIFFICULTY = {
             enemyHpMult:1.25, enemyDmgMult:1.25,
             enemyStartStrength:{ NORMAL:1, ELITE:2, BOSS:2 },
             shopPriceMult:1.25, restHealRate:0.20, bossPhase2:0.60,
-            goldMult:1.2, coreMult:1.2, rareWeightBonus:3 },
+            goldMult:1.2, coreMult:1.2, rareWeightBonus:3 }
 };
 
 /* --- マップのノード出現重み(Phase 5) --- */
@@ -560,14 +552,14 @@ const NODE_WEIGHTS = {
   NORMAL: [{v:'COMBAT',w:45},{v:'EVENT',w:22},{v:'REST',w:12},
            {v:'SHOP',w:8},{v:'ELITE',w:8},{v:'TREASURE',w:5}],
   HARD:   [{v:'COMBAT',w:48},{v:'EVENT',w:20},{v:'REST',w:8},
-           {v:'SHOP',w:7},{v:'ELITE',w:13},{v:'TREASURE',w:4}],
+           {v:'SHOP',w:7},{v:'ELITE',w:13},{v:'TREASURE',w:4}]
 };
 
 /* --- 初期デッキ --- */
 const STARTING_DECK = [
   'atk_punch','atk_punch','atk_punch',
   'pwr_guard','pwr_guard','pwr_guard',
-  'skl_sidestep','dbf_feint',
+  'skl_sidestep','dbf_feint'
 ];
 
 
@@ -582,7 +574,7 @@ function newMeta(){
     unlockedRelics: [],
     clearedNormal: false,
     clearedHard: false,
-    lastPlayDate: null,
+    lastPlayDate: null
   };
 }
 
@@ -637,6 +629,7 @@ function effectiveCard(inst){
   if (!base) throw new Error('未知のカードID: ' + inst.id);
   if (!inst.upgraded || !base.up) return base;
   return Object.assign({}, base, base.up, { name: base.name + '+' });
+  // 注意: 非強化時は定義そのものを返すので、呼び出し側でプロパティを書き換えないこと
 }
 
 
@@ -687,7 +680,7 @@ function rollRarity(diffKey){
   return weightedPick([
     { v:'COMMON',   w: 65 - b },
     { v:'UNCOMMON', w: 25 },
-    { v:'RARE',     w: 10 + b },
+    { v:'RARE',     w: 10 + b }
   ]);
 }
 
@@ -731,7 +724,7 @@ function newDraft(diffKey){
   return {
     difficulty: diffKey,
     exercise: { pushup:0, jumpSquat:0, twistLegRaise:0, plankSeconds:0 },
-    deck: null,
+    deck: null
   };
 }
 
@@ -745,7 +738,7 @@ function startRun(draft){
     relics: [],
     map: null, currentRow: -1, currentCol: null, visited: [],
     exercise: Object.assign({}, draft.exercise),
-    seenEvents: [], removeCost: 75,
+    seenEvents: [], removeCost: 75
   };
   G.draft = null;
   saveGame();
@@ -772,7 +765,7 @@ function makeEnemy(id, idx){
     hp: hp, maxHp: hp, block: 0,
     status: Object.assign(newStatus(), { strength: d.enemyStartStrength[def.tier] || 0 }),
     phaseIdx: 0, patternIdx: def.startPatternIdx || 0,
-    intent: null, turnCount: 0, alive: true,
+    intent: null, turnCount: 0, alive: true
   };
 }
 
@@ -794,7 +787,7 @@ function startBattle(enemyIds){
     attacksPlayedThisTurn: 0,
     turn: 0, phase: 'PLAYER',
     selecting: null,
-    log: [],
+    log: []
   };
   B.drawPile = shuffle(G.run.deck.map(c => ({ uid:c.uid, id:c.id, upgraded:c.upgraded })));
   log('戦闘開始: ' + B.enemies.map(e => e.name).join(' / '));
@@ -1040,8 +1033,105 @@ function resolveEffect(e, ctx){
       log(e.turns === 0 ? '毎ターン開始時にブロック' + e.value
                         : e.turns + 'ターンの間ターン開始時にブロック' + e.value);
       break;
+    case 'energy':
+      B.energy += e.value;
+      log('Energy+' + e.value + ' (残り' + B.energy + ')');
+      break;
+    case 'strength':
+      B.status.strength += e.value;
+      log('力+' + e.value + ' (合計' + B.status.strength + ')');
+      break;
+    case 'counter':
+      B.counter = e.value;
+      log('カウンター体勢(' + e.value + 'ダメージ反撃)');
+      break;
+    case 'reflect':
+      B.reflectPending = 1;
+      log('反発: ターン終了時に残ブロック分を反射する');
+      break;
+    case 'keepBlock':
+      B.keepBlock = true;
+      log('以降、ブロックはターン終了時に消滅しない');
+      break;
+    case 'damagePerAttackPlayed': {
+      const base = e.base + B.attacksPlayedThisTurn * e.per;
+      for (const t of targets){
+        const dmg = calcDamage(base, me, t, { strength: card.type === 'attack' });
+        dealDamageToEnemy(t, dmg);
+        log(t.name + 'に' + dmg + 'ダメージ'
+            + ' (使用済ATTACK ' + B.attacksPlayedThisTurn + '枚, 残HP ' + t.hp + ')');
+      }
+      break;
+    }
+    case 'damagePerAttackInHand': {
+      const n = B.hand.filter(h => CARDS[h.id].cat === 'ATTACK').length;
+      const base = e.base + n * e.per;
+      for (const t of targets){
+        const dmg = calcDamage(base, me, t, { strength: card.type === 'attack' });
+        dealDamageToEnemy(t, dmg);
+        log(t.name + 'に' + dmg + 'ダメージ (手札のATTACK ' + n + '枚, 残HP ' + t.hp + ')');
+      }
+      break;
+    }
+    // 場に残って初めて効く継続効果。使用時点では何もしない
+    case 'blockOnPower':
+    case 'blockBonus':
+      break;
     default:
-      console.warn('未実装のeffect(Phase 3で実装): ' + e.type);
+      console.warn('未知のeffect: ' + e.type);
+  }
+}
+
+/* --- カードテキストの動的生成 --- */
+
+/** blockBonus(完全防御)込みの実効ブロック値 */
+function previewBlock(v){
+  if (!B) return v;
+  let amount = v;
+  for (const p of B.powers)
+    for (const e of effectiveCard(p).effects) if (e.type === 'blockBonus') amount += e.value;
+  return Math.max(0, amount);
+}
+
+/** 現在の場の状態で、そのカードが実際に与えるダメージ */
+function previewDamage(base, card, target){
+  if (!B) return base;
+  return calcDamage(base, playerActor(), target || { status: newStatus() },
+                    { strength: card.type === 'attack' });
+}
+
+function effectText(e, card, target, excludeUid){
+  const all = card.target === 'all' ? '敵全体に' : '';
+  switch (e.type){
+    case 'damage':
+      return previewDamage(e.value, card, target) + 'ダメージ';
+    case 'damageMulti':
+      return previewDamage(e.value, card, target) + 'ダメージ×' + e.times + '回';
+    case 'damagePerAttackPlayed': {
+      const n = B ? B.attacksPlayedThisTurn : 0;
+      return previewDamage(e.base + n * e.per, card, target) + 'ダメージ'
+           + '(基本' + e.base + '+使用済ATTACK×' + e.per + ')';
+    }
+    case 'damagePerAttackInHand': {
+      const n = B ? B.hand.filter(h => CARDS[h.id].cat === 'ATTACK'
+                                       && h.uid !== excludeUid).length : 0;
+      return previewDamage(e.base + n * e.per, card, target) + 'ダメージ'
+           + '(基本' + e.base + '+手札ATTACK×' + e.per + ')';
+    }
+    case 'block':       return 'ブロック' + previewBlock(e.value);
+    case 'draw':        return 'カードを' + e.value + '枚引く';
+    case 'energy':      return 'Energy+' + e.value;
+    case 'status':      return all + STATUS_NAME[e.key] + e.value + 'を付与';
+    case 'strength':    return '力+' + e.value;
+    case 'evade':       return '受ける攻撃' + e.value + '回を無効化';
+    case 'counter':     return 'このターン攻撃を受けたら' + e.value + 'ダメージ反撃(1回)';
+    case 'blockPerTurn':return (e.turns === 0 ? '毎ターン開始時' : e.turns + 'ターンの間ターン開始時')
+                             + 'にブロック' + previewBlock(e.value);
+    case 'reflect':     return 'ターン終了時、残ブロック分を敵全体に反射';
+    case 'blockOnPower':return 'POWERカードを使うたびブロック' + e.value;
+    case 'blockBonus':  return 'ブロックを得るたび追加で+' + e.value;
+    case 'keepBlock':   return 'この戦闘中ブロックがターン終了時に消えない';
+    default:            return e.type;
   }
 }
 
@@ -1187,6 +1277,7 @@ function go(screen){
 }
 
 function render(){
+  B = G.battle;
   const app = document.getElementById('app');
   app.innerHTML = '';
   const fn = RENDERERS[G.screen] || renderPlaceholder;
@@ -1229,7 +1320,7 @@ function renderCardEl(inst, opts){
     node.appendChild(el('div', 'ccost', String(opts.cost != null ? opts.cost : c.cost)));
   }
   node.appendChild(el('div', 'cname', c.name));
-  node.appendChild(el('div', 'ctext', opts.text != null ? opts.text : c.text));
+  node.appendChild(el('div', 'ctext', opts.text != null ? opts.text : cardDisplayText(inst)));
   node.appendChild(el('div', 'ctag', CAT_LABEL[c.cat] + ' / ' + RARITY_LABEL[c.rarity]));
   if (opts.onClick && !opts.disabled) node.addEventListener('click', () => opts.onClick(inst));
   return node;
@@ -1279,7 +1370,7 @@ function renderTitle(){
 
   s.appendChild(el('div', 'mr-spacer'));
   const foot = el('div', 'mr-note mr-center');
-  foot.innerHTML = 'Phase 2 — 戦闘コア<br>'
+  foot.innerHTML = 'Phase 3 — 全37枚のカード効果<br>'
     + 'カード ' + Object.keys(CARDS).length + '種 / 敵 ' + Object.keys(ENEMIES).length + '種 / レリック '
     + Object.keys(RELICS).length + '種';
   s.appendChild(foot);
@@ -1300,7 +1391,7 @@ const PLACEHOLDER_INFO = {
   TREASURE:     ['宝箱',         'Phase 6 で実装'],
   META:         ['強化所',       'Phase 8 で実装'],
   GAMEOVER:     ['敗北',         'Phase 6 で実装'],
-  VICTORY:      ['制覇',         'Phase 6 で実装'],
+  VICTORY:      ['制覇',         'Phase 6 で実装']
 };
 
 function renderPlaceholder(){
@@ -1325,7 +1416,7 @@ function renderDifficulty(){
   wrap.appendChild(makeDiffButton('NORMAL', 'normal', [
     '最大HP 70 / 標準の敵',
     '休憩で最大HPの30%回復',
-    '報酬 ×1.0',
+    '報酬 ×1.0'
   ]));
   wrap.appendChild(makeDiffButton('HARD', 'hard', [
     '最大HP 60(-10)',
@@ -1334,7 +1425,7 @@ function renderDifficulty(){
     'ボスが早く本気になる(HP60%で第2段階)',
     'エリートが出やすく、休憩は出にくい',
     '休憩の回復は最大HPの20%、ショップ価格 ×1.25',
-    '報酬(ゴールド・筋力コア) ×1.2',
+    '報酬(ゴールド・筋力コア) ×1.2'
   ]));
   s.appendChild(wrap);
 
@@ -1577,10 +1668,10 @@ function renderBattle(){
     const playable = canPlay(inst);
     const node = renderCardEl(inst, {
       cost: cardCost(card),
-      text: cardDisplayText(inst),
+      text: cardDisplayText(inst, previewTarget(card)),
       playable: playable,
       disabled: !playable,
-      onClick: () => onHandCardClick(i),
+      onClick: () => onHandCardClick(i)
     });
     if (B.selecting === i) node.classList.add('selected');
     hand.appendChild(node);
@@ -1661,9 +1752,20 @@ function renderPlayerStatus(){
   return p;
 }
 
-/** 現在の状態を反映したカードテキスト(Phase 3 で条件付きカードに拡張) */
-function cardDisplayText(inst){
-  return effectiveCard(inst).text;
+/** 現在の状態(力・脆弱・完全防御・使用済ATTACK枚数)を反映したカードテキスト */
+function cardDisplayText(inst, target){
+  const c = effectiveCard(inst);
+  const body = c.effects.map(e => effectText(e, c, target, inst.uid)).join(' / ');
+  return (c.keep ? '【Power】' : '') + body + (c.exhaust ? ' / 除外' : '');
+}
+
+/** 手札のテキスト表示で使う「たぶんこの敵に当たる」対象 */
+function previewTarget(card){
+  const alive = livingEnemies();
+  if (!alive.length) return null;
+  if (card.target === 'all') return alive[0];
+  if (B.selecting != null && B.enemies[B.selecting]) return null;
+  return alive.length === 1 ? alive[0] : null;
 }
 
 function onHandCardClick(i){
@@ -1722,7 +1824,7 @@ const RENDERERS = {
   MAP: renderMapTemp,
   BATTLE: renderBattle,
   REWARD: () => renderBattleResult(true),
-  GAMEOVER: () => renderBattleResult(false),
+  GAMEOVER: () => renderBattleResult(false)
 };
 
 /* --- デバッグパネル --- */
@@ -1755,6 +1857,23 @@ function renderDebugPanel(){
       for (const e of G.battle.enemies){ e.hp = 0; e.alive = false; }
       checkBattleEnd(); render();
     }));
+    p.appendChild(btn('手札を全部強化', 'small', () => {
+      for (const c of G.battle.hand) c.upgraded = true;
+      render();
+    }));
+    const cs = el('select');
+    cs.style.cssText = 'font:inherit;font-size:11px;background:#1e222c;color:#e8ecf2;border:1px solid #444;border-radius:5px;padding:3px;max-width:100%';
+    const o0 = el('option'); o0.value = ''; o0.textContent = '手札に加える…'; cs.appendChild(o0);
+    for (const c of CARD_LIST){
+      const o = el('option'); o.value = c.id; o.textContent = CAT_LABEL[c.cat] + ' ' + c.name;
+      cs.appendChild(o);
+    }
+    cs.addEventListener('change', () => {
+      if (!cs.value) return;
+      G.battle.hand.push(newCardInstance(cs.value, false));
+      cs.value = ''; render();
+    });
+    p.appendChild(cs);
   }
   return p;
 }
@@ -1767,7 +1886,7 @@ function makeDummyRun(){
     deck: STARTING_DECK.map(id => newCardInstance(id, false)),
     relics: [], map: null, currentRow: -1, currentCol: null, visited: [],
     exercise: { pushup:0, jumpSquat:0, twistLegRaise:0, plankSeconds:0 },
-    seenEvents: [], removeCost: 75,
+    seenEvents: [], removeCost: 75
   };
 }
 
@@ -1789,6 +1908,7 @@ window.MROG = { G, CARDS, CARD_LIST, ENEMIES, RELICS, DIFFICULTY, NODE_WEIGHTS,
   normalizeExercise, toCount, cardsFromCount, coresFromCount, coresGained,
   rollRarity, rollCardOf, buildDeck, startRun, newDraft,
   startBattle, playCard, endPlayerTurn, drawCard, calcDamage, gainBlock,
+  cardDisplayText, effectText, resolveEffect, decideIntent, checkBattleEnd,
   get battle(){ return G.battle; } };
 </script>
 </body>

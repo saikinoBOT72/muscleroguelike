@@ -79,10 +79,12 @@ const fmt = (n) => String(n);
   exhaust: false,
   keep: false,              // true = 使用後フィールドに残る【Power】カード
   effects: [ {type:'damage', value:6} ],
-  up: { effects:[{type:'damage', value:9}] },   // Upgrade(+) の差分(effects全置換)
-  text: '6ダメージ'          // 表示用。up時は textUp を使う
+  up: { effects:[{type:'damage', value:9}] }    // Upgrade(+) の差分(effects全置換)
 }
 ```
+
+> カードの説明文は持たせない。**`effects` から動的に生成する**(Phase 3 の `cardDisplayText()`)。
+> 力・脆弱・完全防御・使用済ATTACK枚数を反映した実数値を表示するため、静的な文面だと必ずずれる。
 
 ### effect.type の一覧(Phase 3 で解決処理を実装)
 | type | フィールド | 意味 |
