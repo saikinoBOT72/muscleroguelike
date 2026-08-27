@@ -1,0 +1,646 @@
+<title>STS準拠アップグレード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --paper:#f7f8fa; --panel:#ffffff; --ink:#171a20; --ink2:#3d4552;
+  --muted:#697182; --rule:#dde2e9; --rule2:#eef1f5;
+  --accent:#2f6fb0; --accent-soft:#e8f0f9;
+  --s1:#2f6fb0; --s2:#c9761f;
+  --atk:#b8413a; --skl:#2f7f57; --dbf:#7d4bab; --pwr:#2f6fb0;
+  --warn:#a8571b; --warn-bg:#fdf3e7;
+  --shadow:0 1px 2px rgba(23,26,32,.05),0 8px 24px rgba(23,26,32,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#14161c; --panel:#1b1e26; --ink:#e8ecf2; --ink2:#c2c9d4;
+    --muted:#8b93a5; --rule:#2c323e; --rule2:#22262f;
+    --accent:#6aa9e8; --accent-soft:#1c2836;
+    --s1:#4f95dc; --s2:#c8813a;
+    --atk:#e2574c; --skl:#4caf7d; --dbf:#a86fd6; --pwr:#5a9fd4;
+    --warn:#e0a04a; --warn-bg:#2a2018;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#14161c; --panel:#1b1e26; --ink:#e8ecf2; --ink2:#c2c9d4;
+  --muted:#8b93a5; --rule:#2c323e; --rule2:#22262f;
+  --accent:#6aa9e8; --accent-soft:#1c2836;
+  --s1:#4f95dc; --s2:#c8813a;
+  --atk:#e2574c; --skl:#4caf7d; --dbf:#a86fd6; --pwr:#5a9fd4;
+  --warn:#e0a04a; --warn-bg:#2a2018;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Zen Kaku Gothic New",-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;
+  font-size:15.5px; line-height:1.95; letter-spacing:.01em;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 100px;
+      display:grid; grid-template-columns:minmax(0,1fr); gap:0}
+@media (min-width:1000px){
+  .wrap{grid-template-columns:190px minmax(0,1fr); gap:56px; padding-right:40px}
+}
+
+/* ── ヘッダ ── */
+header{padding:72px 0 44px; border-bottom:1px solid var(--rule); margin-bottom:52px}
+@media (min-width:1000px){ header{grid-column:1/-1} }
+.eyebrow{
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11.5px; font-weight:600;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--accent); margin:0 0 14px;
+}
+h1{
+  font-family:"Zen Old Mincho",serif; font-weight:700; font-size:clamp(30px,5.4vw,46px);
+  line-height:1.32; margin:0 0 20px; letter-spacing:.02em; text-wrap:balance;
+}
+.lede{font-size:16.5px; color:var(--ink2); max-width:62ch; margin:0 0 26px; line-height:1.95}
+.meta{display:flex; flex-wrap:wrap; gap:8px}
+.tag{
+  font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--muted);
+  border:1px solid var(--rule); border-radius:99px; padding:4px 12px; white-space:nowrap;
+}
+
+/* ── 目次 ── */
+nav{display:none}
+@media (min-width:1000px){
+  nav{display:block; position:sticky; top:32px; align-self:start; padding-top:4px}
+  nav ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+  nav a{
+    display:block; text-decoration:none; color:var(--muted); font-size:12.5px;
+    padding:5px 10px; border-radius:6px; border-left:2px solid transparent; line-height:1.5;
+  }
+  nav a:hover{color:var(--ink); background:var(--rule2)}
+  nav a:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  nav .num{font-family:"IBM Plex Mono",monospace; font-size:10.5px; color:var(--accent); margin-right:7px}
+}
+
+main{min-width:0}
+section{margin:0 0 68px; scroll-margin-top:24px}
+h2{
+  font-family:"Zen Old Mincho",serif; font-size:clamp(21px,3.2vw,27px); font-weight:700;
+  line-height:1.5; margin:0 0 8px; letter-spacing:.02em; text-wrap:balance;
+}
+h2 .num{
+  display:block; font-family:"IBM Plex Mono",monospace; font-size:11.5px; font-weight:600;
+  letter-spacing:.16em; color:var(--accent); margin-bottom:10px;
+}
+h3{
+  font-family:"Zen Kaku Gothic New",sans-serif; font-size:16px; font-weight:700;
+  margin:38px 0 12px; letter-spacing:.02em; line-height:1.6;
+}
+h4{font-size:14px; font-weight:700; margin:26px 0 8px; color:var(--ink2)}
+p{margin:0 0 18px; max-width:66ch}
+.sub{color:var(--muted); font-size:14px; max-width:66ch}
+strong{font-weight:700}
+em{font-style:normal; background:linear-gradient(transparent 62%, var(--accent-soft) 62%); font-weight:500}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:.88em}
+code{background:var(--rule2); padding:1.5px 6px; border-radius:4px; color:var(--ink2)}
+a{color:var(--accent)}
+
+/* ── 引用・注記 ── */
+.callout{
+  border-left:3px solid var(--accent); background:var(--panel); box-shadow:var(--shadow);
+  border-radius:0 10px 10px 0; padding:18px 22px; margin:24px 0; max-width:68ch;
+}
+.callout p:last-child{margin-bottom:0}
+.callout.warn{border-left-color:var(--warn); background:var(--warn-bg); box-shadow:none}
+.callout .label{
+  font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--accent); display:block; margin-bottom:8px;
+}
+.callout.warn .label{color:var(--warn)}
+
+/* ── 表 ── */
+.tablewrap{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:10px; background:var(--panel)}
+table{border-collapse:collapse; width:100%; font-size:13.5px; min-width:440px}
+th,td{padding:11px 15px; text-align:left; border-bottom:1px solid var(--rule2); line-height:1.7}
+thead th{
+  font-size:11.5px; font-weight:700; letter-spacing:.08em; color:var(--muted);
+  background:var(--rule2); border-bottom:1px solid var(--rule); white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:none}
+td.num,th.num{text-align:right; font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums}
+.pill{
+  display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:600;
+  padding:1px 8px; border-radius:99px; border:1px solid currentColor; white-space:nowrap;
+  vertical-align:1px; opacity:.85;
+}
+.c-atk{color:var(--atk)} .c-skl{color:var(--skl)} .c-dbf{color:var(--dbf)} .c-pwr{color:var(--pwr)}
+
+/* ── チャート ── */
+figure{margin:30px 0; padding:24px; background:var(--panel); border:1px solid var(--rule);
+       border-radius:12px; box-shadow:var(--shadow)}
+figcaption{font-size:13px; color:var(--muted); margin-top:18px; line-height:1.75}
+.figtitle{font-size:15px; font-weight:700; margin:0 0 4px}
+.figsub{font-size:12.5px; color:var(--muted); margin:0 0 22px}
+.legend{display:flex; gap:18px; flex-wrap:wrap; margin:0 0 20px; font-size:12.5px; color:var(--ink2)}
+.legend span{display:inline-flex; align-items:center; gap:7px}
+.swatch{width:11px; height:11px; border-radius:3px; flex:0 0 auto}
+.bars{display:flex; flex-direction:column; gap:20px}
+.barrow{display:grid; grid-template-columns:1fr; gap:7px}
+.barlabel{display:flex; justify-content:space-between; align-items:baseline; gap:12px; font-size:13px}
+.barlabel b{font-weight:700}
+.barlabel .tot{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--muted)}
+.track{display:flex; height:34px; gap:2px}
+.seg{
+  position:relative; display:flex; align-items:center; justify-content:center;
+  font-family:"IBM Plex Mono",monospace; font-size:12px; font-weight:600; color:#fff;
+  border-radius:2px; cursor:default; transition:filter .12s;
+}
+.seg:first-child{border-radius:4px 2px 2px 4px}
+.seg:last-child{border-radius:2px 4px 4px 2px}
+.seg:hover{filter:brightness(1.08)}
+.seg.s1{background:var(--s1)} .seg.s2{background:var(--s2)}
+.seg .pct{text-shadow:0 1px 2px rgba(0,0,0,.35)}
+
+/* ── 深さの尺度 ── */
+.depth{display:flex; flex-direction:column; gap:26px; margin:26px 0}
+.dep{display:grid; gap:9px}
+.dephead{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; font-size:13.5px}
+.dephead b{font-weight:700}
+.dephead .val{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--muted)}
+.deptrack{position:relative; height:12px; background:var(--rule2); border-radius:6px; overflow:hidden}
+.depfill{position:absolute; inset:0 auto 0 0; border-radius:6px}
+.depgates{position:relative; height:34px; margin-top:2px}
+.gate{position:absolute; top:0; transform:translateX(-50%); text-align:center; width:86px}
+.gate i{display:block; width:1px; height:8px; background:var(--rule); margin:0 auto 3px}
+.gate span{font-family:"IBM Plex Mono",monospace; font-size:10px; color:var(--muted); display:block; line-height:1.4}
+.gate b{font-size:10.5px; font-weight:700; color:var(--ink2); display:block}
+.gate.on b{color:var(--accent)}
+.gate.on i{background:var(--accent)}
+
+/* ── フェーズ ── */
+.phases{display:grid; gap:10px; margin:24px 0}
+.ph{
+  display:grid; grid-template-columns:52px 1fr auto; gap:16px; align-items:center;
+  padding:14px 18px; background:var(--panel); border:1px solid var(--rule); border-radius:10px;
+}
+.ph .pn{font-family:"IBM Plex Mono",monospace; font-size:13px; font-weight:600; color:var(--accent)}
+.ph .pt{font-size:14px; line-height:1.6}
+.ph .pt small{display:block; color:var(--muted); font-size:12px; margin-top:2px}
+.ph .sz{font-family:"IBM Plex Mono",monospace; font-size:10.5px; color:var(--muted);
+        border:1px solid var(--rule); border-radius:99px; padding:2px 9px; white-space:nowrap}
+.ph.key{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset}
+.ph.key .sz{color:var(--accent); border-color:var(--accent)}
+
+hr{border:0; border-top:1px solid var(--rule); margin:56px 0}
+ul{margin:0 0 18px; padding-left:1.35em; max-width:66ch}
+li{margin-bottom:8px}
+li::marker{color:var(--muted)}
+
+#tip{
+  position:fixed; z-index:50; pointer-events:none; opacity:0; transition:opacity .1s;
+  background:var(--ink); color:var(--paper); font-size:12px; line-height:1.5;
+  padding:7px 11px; border-radius:7px; max-width:240px;
+  font-family:"IBM Plex Mono",monospace; box-shadow:0 4px 16px rgba(0,0,0,.25);
+}
+@media (prefers-reduced-motion: reduce){ *{transition:none !important; animation:none !important} }
+:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:3px}
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">筋トレ融合ローグライク / 第2期設計</p>
+  <h1>運動は「デッキ」ではなく<br>「ビルドの土台」になる</h1>
+  <p class="lede">
+    完成版をスレイ・ザ・スパイアに近づけるための改訂計画。
+    規模の拡張(3幕化・カード2倍・レリック5倍)より前に、
+    <em>デッキがランの前に確定している</em>という構造そのものを作り替える。
+  </p>
+  <div class="meta">
+    <span class="tag">Phase 11–18</span>
+    <span class="tag">7行 → 36ノード</span>
+    <span class="tag">カード 37 → 81</span>
+    <span class="tag">レリック 6 → 30</span>
+    <span class="tag">敵 9 → 27</span>
+  </div>
+</header>
+
+<nav aria-label="目次">
+  <ol>
+    <li><a href="#root"><span class="num">01</span>根本原因</a></li>
+    <li><a href="#redesign"><span class="num">02</span>運動記録の再設計</a></li>
+    <li><a href="#depth"><span class="num">03</span>深さ</a></li>
+    <li><a href="#form"><span class="num">04</span>型</a></li>
+    <li><a href="#volume"><span class="num">05</span>体力</a></li>
+    <li><a href="#training"><span class="num">06</span>筋トレの原則</a></li>
+    <li><a href="#scale"><span class="num">07</span>規模の拡張</a></li>
+    <li><a href="#phases"><span class="num">08</span>実装フェーズ</a></li>
+    <li><a href="#gap"><span class="num">09</span>残る差</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<section id="root">
+  <h2><span class="num">01 — 診断</span>STSの面白さが削れている根本原因</h2>
+
+  <p>
+    スレイ・ザ・スパイアの面白さの中心は、<strong>ランの中でシナジーを見つけて組み上げていく</strong>ことにある。
+    報酬の3択を20回以上繰り返し、そのたびに「この方向に寄せるか」「デッキを薄く保つか」を選ぶ。
+    その積み重ねが1ランの物語になる。
+  </p>
+  <p>
+    現行版はこの構造が成立していない。最大24枚のデッキのうち
+    <strong>16枚が運動入力の時点で確定</strong>しており、ランの中で足せるのは報酬4〜5枚だけ。
+    プレイヤーは配られた山を回すだけで、組み上げる余地がない。
+  </p>
+
+  <figure>
+    <p class="figtitle">デッキはどこから来るか</p>
+    <p class="figsub">1ランを終えた時点のデッキの内訳(枚数)</p>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--s2)"></i>ラン前に確定(初期デッキ + 運動由来)</span>
+      <span><i class="swatch" style="background:var(--s1)"></i>ラン中に選ぶ(報酬・ショップ)</span>
+    </div>
+    <div class="bars" id="chart">
+      <div class="barrow">
+        <div class="barlabel"><b>現行版</b><span class="tot">28枚 · ラン中に選べるのは 5枚(18%)</span></div>
+        <div class="track">
+          <div class="seg s2" style="flex:23" data-t="ラン前に確定 23枚 — 初期8 + 運動由来15"><span class="pct">23</span></div>
+          <div class="seg s1" style="flex:5" data-t="ラン中に選ぶ 5枚 — 報酬のみ"><span class="pct">5</span></div>
+        </div>
+      </div>
+      <div class="barrow">
+        <div class="barlabel"><b>本改訂後</b><span class="tot">32枚 · ラン中に選べるのは 20枚(63%)</span></div>
+        <div class="track">
+          <div class="seg s2" style="flex:12" data-t="ラン前に確定 12枚 — 初期8 + 成果カード4"><span class="pct">12</span></div>
+          <div class="seg s1" style="flex:20" data-t="ラン中に選ぶ 20枚 — 3幕ぶんの報酬・ショップ"><span class="pct">20</span></div>
+        </div>
+      </div>
+      <div class="barrow">
+        <div class="barlabel"><b>スレイ・ザ・スパイア</b><span class="tot">35枚 · ラン中に選べるのは 25枚(71%)</span></div>
+        <div class="track">
+          <div class="seg s2" style="flex:10" data-t="ラン前に確定 10枚 — 初期デッキのみ"><span class="pct">10</span></div>
+          <div class="seg s1" style="flex:25" data-t="ラン中に選ぶ 25枚 — 3幕ぶんの報酬・ショップ"><span class="pct">25</span></div>
+        </div>
+      </div>
+    </div>
+    <figcaption>
+      現行版は8割以上がラン開始前に決まっている。STSはその逆で、7割をランの中で選ぶ。
+      本改訂はこの比率をSTS側に寄せる。<br>
+      数値は平均的なランの想定値(STSはアイアンクラッド、報酬をおおむね取り続けた場合)。
+    </figcaption>
+  </figure>
+
+  <div class="tablewrap">
+    <table>
+      <caption class="sub" style="text-align:left;padding:10px 15px 0">上図の数値</caption>
+      <thead><tr><th>バージョン</th><th class="num">ラン前に確定</th><th class="num">ラン中に選ぶ</th><th class="num">合計</th></tr></thead>
+      <tbody>
+        <tr><td>現行版</td><td class="num">23</td><td class="num">5</td><td class="num">28</td></tr>
+        <tr><td>本改訂後</td><td class="num">12</td><td class="num">20</td><td class="num">32</td></tr>
+        <tr><td>スレイ・ザ・スパイア</td><td class="num">10</td><td class="num">25</td><td class="num">35</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout warn">
+    <span class="label">重要</span>
+    <p>
+      これは<strong>戦闘回数を4.6→24に増やしても解決しない</strong>。
+      デッキが最初から決まっているなら、幕が3つになっても「引きが強い日か弱い日か」でしかない。
+      規模の拡張は必要だが、それだけでは足りない。
+    </p>
+  </div>
+</section>
+
+<hr>
+
+<section id="redesign">
+  <h2><span class="num">02 — 中心となる変更</span>運動記録の再設計</h2>
+
+  <p>
+    運動の影響を<strong>弱めるのではなく、効き方を変えて強める</strong>。
+    現行は「回数 → カード枚数」の一本だけだった。これを4つに分け、
+    そのすべてを実際の筋トレのロジックに対応させる。
+  </p>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>軸</th><th>筋トレでの意味</th><th>ゲームでの効果</th></tr></thead>
+      <tbody>
+        <tr><td><b>深さ</b></td><td>鍛えた部位しか使えない</td><td>種目ごとの回数が、<strong>そのカテゴリで報酬に出るレアリティ上限</strong>を決める</td></tr>
+        <tr><td><b>型</b></td><td>部位分割法(その日は何の日か)</td><td>最も回数の多い種目が「今日の型」。開始レリックと報酬の出やすさが変わる</td></tr>
+        <tr><td><b>体力</b></td><td>総ボリューム(セット×レップ)</td><td>総回数が<strong>最大HP・手札枚数・開始ゴールド</strong>を決める</td></tr>
+        <tr><td><b>成果</b></td><td>その日やった分だけ身についたもの</td><td>種目ごとに<strong>1枚だけ</strong>、深さに応じたカードがデッキに入る</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <span class="label">デッキ枚数</span>
+    <p>
+      初期デッキは<strong>8枚に戻す</strong>(仕様書どおり: パンチ×3、ガード×3、サイドステップ、フェイント)。
+      成果カードは最大4枚なので、<strong>ラン開始時のデッキは8〜12枚</strong>。
+      STSの10枚とほぼ同じで、デッキの大半をラン中の報酬で組み上げることになる。
+    </p>
+    <p class="sub" style="margin-top:12px">
+      Phase 9 で12枚にしたのは「基本カード4種がどこからも入手できない」問題への対処だった。
+      これは<strong>強化所の「初期デッキ差し替え」</strong>で解決する
+      —— パンチ1枚をダブルパンチに、ガード1枚を踏ん張りに、といった入れ替えを恒久的に買えるようにする。
+      「自分の型を作る」というメタ進行の軸が新しく生まれる。
+    </p>
+  </div>
+</section>
+
+<section id="depth">
+  <h2><span class="num">03</span>深さ — 鍛えていない部位は使えない</h2>
+
+  <p>
+    種目ごとの回数(プランクは2秒=1カウント)が、
+    <strong>そのカテゴリで報酬・ショップ・イベントに出現しうるカードのレアリティ上限</strong>を決める。
+  </p>
+
+  <figure>
+    <p class="figtitle">回数がレアリティの上限を開ける</p>
+    <p class="figsub">例: 腕立て50回 / スクワット12回 / ツイスト0回 / プランク180秒(=90カウント)</p>
+
+    <div class="depth">
+      <div class="dep">
+        <div class="dephead"><b class="c-atk">腕立て伏せ</b><span class="pill c-atk">ATTACK</span><span class="val">50回 → UNCOMMON まで</span></div>
+        <div class="deptrack"><div class="depfill" style="width:62%;background:var(--atk)"></div></div>
+        <div class="depgates">
+          <div class="gate" style="left:2%"><i></i><b>—</b><span>0〜4</span><span>出ない</span></div>
+          <div class="gate on" style="left:22%"><i></i><b>C</b><span>5〜</span><span>COMMON</span></div>
+          <div class="gate on" style="left:52%"><i></i><b>U</b><span>25〜</span><span>UNCOMMON</span></div>
+          <div class="gate" style="left:88%"><i></i><b>R</b><span>80〜</span><span>RARE</span></div>
+        </div>
+      </div>
+
+      <div class="dep">
+        <div class="dephead"><b class="c-skl">ジャンプスクワット</b><span class="pill c-skl">SKILL</span><span class="val">12回 → COMMON まで</span></div>
+        <div class="deptrack"><div class="depfill" style="width:32%;background:var(--skl)"></div></div>
+        <div class="depgates">
+          <div class="gate" style="left:2%"><i></i><b>—</b><span>0〜4</span><span>出ない</span></div>
+          <div class="gate on" style="left:22%"><i></i><b>C</b><span>5〜</span><span>COMMON</span></div>
+          <div class="gate" style="left:52%"><i></i><b>U</b><span>25〜</span><span>UNCOMMON</span></div>
+          <div class="gate" style="left:88%"><i></i><b>R</b><span>80〜</span><span>RARE</span></div>
+        </div>
+      </div>
+
+      <div class="dep">
+        <div class="dephead"><b class="c-dbf">ツイストレッグレイズ</b><span class="pill c-dbf">DEBUFF</span><span class="val" style="color:var(--warn)">0回 → 1枚も出ない</span></div>
+        <div class="deptrack"><div class="depfill" style="width:0;background:var(--dbf)"></div></div>
+        <div class="depgates">
+          <div class="gate" style="left:2%"><i></i><b>—</b><span>0〜4</span><span>出ない</span></div>
+          <div class="gate" style="left:22%"><i></i><b>C</b><span>5〜</span><span>COMMON</span></div>
+          <div class="gate" style="left:52%"><i></i><b>U</b><span>25〜</span><span>UNCOMMON</span></div>
+          <div class="gate" style="left:88%"><i></i><b>R</b><span>80〜</span><span>RARE</span></div>
+        </div>
+      </div>
+
+      <div class="dep">
+        <div class="dephead"><b class="c-pwr">プランク</b><span class="pill c-pwr">POWER</span><span class="val">180秒 = 90カウント → RARE まで</span></div>
+        <div class="deptrack"><div class="depfill" style="width:96%;background:var(--pwr)"></div></div>
+        <div class="depgates">
+          <div class="gate" style="left:2%"><i></i><b>—</b><span>0〜4</span><span>出ない</span></div>
+          <div class="gate on" style="left:22%"><i></i><b>C</b><span>5〜</span><span>COMMON</span></div>
+          <div class="gate on" style="left:52%"><i></i><b>U</b><span>25〜</span><span>UNCOMMON</span></div>
+          <div class="gate on" style="left:88%"><i></i><b>R</b><span>80〜</span><span>RARE</span></div>
+        </div>
+      </div>
+    </div>
+
+    <figcaption>
+      この日はツイストをやっていないので、<strong>DEBUFFのカードが1枚も報酬に出ない</strong>。
+      出血も脆弱付与も使えないデッキで3幕を戦うことになる。
+    </figcaption>
+  </figure>
+
+  <div class="callout">
+    <span class="label">これが最も強く効く仕組み</span>
+    <p>
+      デッキはランの中で組むが、<strong>何を組めるかは今日の運動が決めている</strong>。
+      腕立てをしていない日は攻撃カードが1枚も引けない。
+      鍛えた部位しか使えないという、筋トレそのもののロジックがそのままゲームの制約になる。
+    </p>
+  </div>
+
+  <h3>「全カテゴリ均等」を撤廃できる理由</h3>
+  <p>
+    報酬側で均等にしなくても、入力側が「引けるカテゴリ」を決めている。
+    偏った運動をすれば自然に偏ったデッキになり、全部やれば全部から引ける。
+  </p>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>その日の入力</th><th>結果</th></tr></thead>
+      <tbody>
+        <tr><td>腕立てだけ 200回</td><td>ATTACK は RARE まで出る。<strong>SKILL / DEBUFF / POWER は1枚も出ない</strong>。ブロックもドローもデバフも無いデッキで3幕を戦う</td></tr>
+        <tr><td>4種目とも 50回</td><td>全カテゴリ UNCOMMON まで。バランス型で戦える</td></tr>
+        <tr><td>4種目とも 100回</td><td>全カテゴリ RARE まで + 体力ボーナス。<strong>最も強い</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="sub">
+    偏らせれば偏ったデッキになり、それが弱いなら偏らせた本人の責任という構造になる。
+    報酬側で均等を強制するより、はるかに直接的に「全部やる」動機になる。
+  </p>
+</section>
+
+<section id="form">
+  <h2><span class="num">04</span>型 — 今日は何の日か</h2>
+  <p>
+    回数が最も多い種目が「今日の型」。ラン開始時に専用レリックを1つ得て、
+    そのカテゴリのカードが報酬に出る確率が1.5倍になる。部位分割法をそのまま持ち込む。
+  </p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>型</th><th>条件</th><th>開始レリック</th></tr></thead>
+      <tbody>
+        <tr><td><b class="c-atk">押しの型</b></td><td>腕立てが最多</td><td>鍛錬の証 — 戦闘開始時 力+1</td></tr>
+        <tr><td><b class="c-skl">跳ねの型</b></td><td>ジャンプスクワットが最多</td><td>加速装置 — 最初のターン Energy+1</td></tr>
+        <tr><td><b class="c-dbf">捻りの型</b></td><td>ツイストレッグレイズが最多</td><td>執念の記録 — 出血ダメージ+50%</td></tr>
+        <tr><td><b class="c-pwr">支えの型</b></td><td>プランクが最多</td><td>不屈のプレート — 戦闘開始時 ブロック+5</td></tr>
+        <tr><td><b>総合の型</b></td><td>最多が2種目以上で並ぶ</td><td>レリックなし。代わりに最大HP+10</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="sub">型のレリックはメタ進行のアンロックを無視して必ず手に入る。型が確実に効くようにするため。</p>
+</section>
+
+<section id="volume">
+  <h2><span class="num">05</span>体力 — 総ボリューム</h2>
+  <p>4種目の回数の合計が、最大HP・毎ターンの手札枚数・開始ゴールドを決める。</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th class="num">volume</th><th class="num">最大HP</th><th class="num">手札</th><th class="num">開始ゴールド</th></tr></thead>
+      <tbody>
+        <tr><td class="num">0–19</td><td class="num">70</td><td class="num">5</td><td class="num">99</td></tr>
+        <tr><td class="num">20–59</td><td class="num">75</td><td class="num">5</td><td class="num">110</td></tr>
+        <tr><td class="num">60–119</td><td class="num">80</td><td class="num">6</td><td class="num">125</td></tr>
+        <tr><td class="num">120–239</td><td class="num">85</td><td class="num">6</td><td class="num">145</td></tr>
+        <tr><td class="num">240+</td><td class="num"><b>90</b></td><td class="num"><b>7</b></td><td class="num"><b>170</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="sub">むずいは各段階の最大HPから −10。「たくさん動いた日は体力がある」という直感どおりの効き方になる。</p>
+</section>
+
+<section id="training">
+  <h2><span class="num">06</span>筋トレの原則をルールにする</h2>
+  <p>深さ・型・体力に加えて、実際のトレーニング原則を3つ、ゲームの仕組みとして入れる。</p>
+
+  <h3>超回復 — 休むことが強くする</h3>
+  <p>
+    休憩所の「休む」を<strong>超回復</strong>に変える。HPを回復するだけでなく、
+    <strong>次の戦闘のみ 力+1・敏捷+1</strong>が付く。
+    「鍛える(カード強化)」を選ぶか「休む」を選ぶかが、単なるHP管理より深い選択になる。
+  </p>
+
+  <h3>漸進性過負荷 — 幕ごとに要求が上がる</h3>
+  <p>
+    第2幕は敵HP +15% / 攻撃力 +10%、第3幕は +30% / +20%。
+    幕の開始時に<strong>「第2幕 — 漸進性過負荷: 敵のHP +15% / 攻撃力 +10%」</strong>と明示する。
+    同じ重量を続けても強くならない、という原則をそのまま見せる。
+  </p>
+
+  <h3>セット — 同じ動作を繰り返す</h3>
+  <p>
+    一部のカードに「このターン、同じカードを使うのが2回目以降なら効果+」を持たせる。
+    <code>ダブルパンチ</code> <code>ラッシュ</code> <code>ダッシュ</code> の3枚に限定する。
+    同じ動作を反復することが力になるという手触りをカードに落とす。
+  </p>
+</section>
+
+<hr>
+
+<section id="scale">
+  <h2><span class="num">07 — 二番目に重要</span>規模の拡張</h2>
+  <p>
+    構築のアークが起きるだけの回数を確保する。
+    現行の実測は1ラン<strong>7ノード・4.6戦</strong>で、デッキを組む機会が物理的に足りない。
+  </p>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>項目</th><th class="num">現行</th><th class="num">改訂後</th><th class="num">STS</th></tr></thead>
+      <tbody>
+        <tr><td>1ランで踏むノード</td><td class="num">7.0</td><td class="num"><b>36</b></td><td class="num">45–48</td></tr>
+        <tr><td>1ランの戦闘回数</td><td class="num">4.6</td><td class="num"><b>約24</b></td><td class="num">約40</td></tr>
+        <tr><td>幕</td><td class="num">1</td><td class="num"><b>3</b></td><td class="num">3(+1)</td></tr>
+        <tr><td>カード総数</td><td class="num">37</td><td class="num"><b>81</b></td><td class="num">約110</td></tr>
+        <tr><td>レリック</td><td class="num">6</td><td class="num"><b>30</b></td><td class="num">180+</td></tr>
+        <tr><td>敵</td><td class="num">9</td><td class="num"><b>27</b></td><td class="num">50+</td></tr>
+        <tr><td>ポーション</td><td class="num">0</td><td class="num"><b>18</b></td><td class="num">約50</td></tr>
+        <tr><td>呪い・状態異常カード</td><td class="num">0</td><td class="num"><b>8</b></td><td class="num">あり</td></tr>
+        <tr><td>状態異常</td><td class="num">4</td><td class="num"><b>11</b></td><td class="num">多数</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>あわせて入るもの</h3>
+  <ul>
+    <li><strong>ポーション18種・3枠</strong> — 詰みかけを1回だけひっくり返すリソース。現行版には戦闘中の逃げ場が一切なかった</li>
+    <li><strong>呪い4種・状態異常カード4種</strong> — デッキが汚れる手段。イベントで「リスクを取る」軸が生まれる</li>
+    <li><strong>敏捷・虚弱・棘・再生・金属化・アーティファクト・激昂</strong> — 特にブロック側のデバフが無く、防御特化が対策不能に強かった</li>
+    <li><strong>保持 / 霊質 / 先天 / 使用不可</strong> のキーワード</li>
+    <li><strong>ボスレリック6種</strong> — Energy+1と引き換えにデメリットを負う、STSの大きな分岐点</li>
+    <li><strong>ラン開始の祝福4択</strong>(Neow相当)</li>
+    <li><strong>出血を毎ターン−1の減衰式に変更</strong> — 非減衰のままだと3幕24戦で青天井に強くなる</li>
+  </ul>
+</section>
+
+<section id="phases">
+  <h2><span class="num">08</span>実装フェーズ</h2>
+  <p>1フェーズ = 1コミット。各フェーズ終了時点で <code>index.html</code> は必ず単体で動く。</p>
+
+  <div class="phases">
+    <div class="ph"><span class="pn">11</span><span class="pt">3幕構成・マップ12行化・幕倍率・到達可能性の保証・超回復<small>依存なし</small></span><span class="sz">中</span></div>
+    <div class="ph"><span class="pn">12</span><span class="pt">状態異常7種・キーワード4種・出血の減衰化<small>11 に依存</small></span><span class="sz">中</span></div>
+    <div class="ph key"><span class="pn">13</span><span class="pt"><b>運動記録の再設計</b>(深さ / 型 / 体力 / 成果)+ カード36枚 + effect type 22種 + 報酬の均等撤廃<small>12 に依存 · 3コミットに分割(13a / 13b / 13c)</small></span><span class="sz">特大</span></div>
+    <div class="ph"><span class="pn">14</span><span class="pt">呪い4種・状態異常カード4種・イベント4種<small>13 に依存</small></span><span class="sz">小</span></div>
+    <div class="ph"><span class="pn">15</span><span class="pt">ポーション18種・3枠・ドロップ・ショップ<small>13 に依存</small></span><span class="sz">中</span></div>
+    <div class="ph"><span class="pn">16</span><span class="pt">レリック30種化・フック9種・ボスレリック・祝福<small>15 に依存</small></span><span class="sz">大</span></div>
+    <div class="ph"><span class="pn">17</span><span class="pt">敵27種化・幕別プール・新しい敵行動<small>11 + 12 に依存</small></span><span class="sz">大</span></div>
+    <div class="ph"><span class="pn">18</span><span class="pt">3幕構成での再調整・演出・最終QA<small>全フェーズに依存</small></span><span class="sz">中</span></div>
+  </div>
+
+  <p class="sub">14 / 15 / 17 は互いに独立しているので順序を入れ替えてよい。</p>
+
+  <h3>バランスの合格ライン</h3>
+  <p>200ラン×条件のシミュレーションで測る。特に最後の2行は、調整のたびに必ず確認する。</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>指標</th><th>ふつう</th><th>むずい</th></tr></thead>
+      <tbody>
+        <tr><td>クリア率</td><td>45–60%</td><td>15–25%</td></tr>
+        <tr><td>ボス到達時HP</td><td>40–70%</td><td>25–50%</td></tr>
+        <tr><td>最終デッキ枚数</td><td colspan="2">28–40枚</td></tr>
+        <tr><td><b>運動0回と各種目100回のクリア率差</b></td><td colspan="2"><b>25ポイント以上</b></td></tr>
+        <tr><td><b>1種目特化(200回×1)と均等(50回×4)</b></td><td colspan="2"><b>均等が10〜25ポイント上</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout warn">
+    <span class="label">過去の失敗</span>
+    <p>
+      Phase 9 で一度「運動量とクリア率の相関が0」になり、ゲームの根幹が壊れていた。
+      デッキの希釈が生成カードの質を相殺していたのが原因で、実測するまで気づけなかった。
+      同じことを繰り返さないため、この2行を合格条件に固定する。
+    </p>
+  </div>
+</section>
+
+<hr>
+
+<section id="gap">
+  <h2><span class="num">09</span>この改訂でもSTSと差が残るもの</h2>
+  <p>正直に記録しておく。以下は本改訂の範囲外。</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>項目</th><th>STS</th><th>改訂後</th><th>理由</th></tr></thead>
+      <tbody>
+        <tr><td>キャラクター</td><td>4人、機構が別物</td><td>1つのデッキに4カテゴリ混在</td><td>運動→カテゴリが根幹なので変えられない</td></tr>
+        <tr><td>カード総数</td><td>約110</td><td>81</td><td>実装コスト。将来の拡張枠</td></tr>
+        <tr><td>レリック</td><td>180+</td><td>30</td><td>同上</td></tr>
+        <tr><td>Ascension</td><td>20段</td><td>2段(+5段の案あり)</td><td>Phase 10 で別途</td></tr>
+        <tr><td>カードのXコスト</td><td>あり</td><td>部分的に代替</td><td>UIが複雑になる</td></tr>
+        <tr><td>デッキ操作の深さ</td><td>Scry / 山札操作 / Retain</td><td>Retain のみ</td><td>同上</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <span class="label">最も大きく残る差</span>
+    <p>
+      <strong>キャラクターによるビルドの分岐。</strong>
+      STSはキャラを選んだ時点で別ゲームになるが、本作は常に4カテゴリの混成デッキになる。
+      これはコンセプト由来なので消せない。
+    </p>
+    <p>
+      代わりに<strong>運動の配分</strong>でビルドを分岐させる —— 腕立てだけやればATTACK特化、
+      プランクだけやればPOWER特化。それが「深さ」と「型」の役割であり、
+      報酬の均等ルールを撤廃するのも、この配分によるビルド分岐を報酬が邪魔しないようにするためでもある。
+    </p>
+  </div>
+</section>
+
+</main>
+</div>
+<div id="tip" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  var tip = document.getElementById('tip');
+  document.querySelectorAll('.seg[data-t]').forEach(function(el){
+    function show(e){
+      tip.textContent = el.getAttribute('data-t');
+      tip.style.opacity = '1';
+      var x = (e.touches ? e.touches[0].clientX : e.clientX);
+      var y = (e.touches ? e.touches[0].clientY : e.clientY);
+      var w = tip.offsetWidth;
+      tip.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, x - w/2)) + 'px';
+      tip.style.top  = Math.max(8, y - tip.offsetHeight - 14) + 'px';
+    }
+    el.addEventListener('mousemove', show);
+    el.addEventListener('mouseenter', show);
+    el.addEventListener('mouseleave', function(){ tip.style.opacity = '0'; });
+  });
+})();
+</script>
