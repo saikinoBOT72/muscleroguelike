@@ -239,6 +239,32 @@ body{
 .mr-node.t-BOSS .icon{width:52px;height:52px;font-size:23px}
 .mr-node.selectable.t-BOSS .icon{border-color:#e2574c;box-shadow:0 0 18px rgba(226,87,76,.5)}
 .mr-legend{display:flex;flex-wrap:wrap;gap:6px 10px;justify-content:center;font-size:10.5px;color:var(--dim)}
+
+/* モーダル / ノード画面 */
+.mr-modal{
+  position:fixed;inset:0;background:rgba(8,10,14,.82);z-index:200;
+  display:flex;align-items:center;justify-content:center;padding:16px;
+}
+.mr-modalbox{
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;
+  width:100%;max-width:460px;max-height:86vh;display:flex;flex-direction:column;gap:10px;
+}
+.mr-modaltitle{font-size:15px;font-weight:700}
+.mr-modallist{flex:1;min-height:0;overflow-y:auto;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:4px}
+.mr-result{border-left:3px solid var(--pwr);color:#cfe0f2}
+.mr-warn{background:#2a2018;border:1px solid #7a5a30;color:#f0a04a;border-radius:8px;padding:8px 10px;font-size:12.5px;text-align:center}
+.mr-locked{color:#c56a6a;font-size:11px}
+.mr-card .cprice{
+  position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);
+  background:#3a3106;border:1px solid var(--gold);color:var(--gold);
+  border-radius:99px;padding:1px 9px;font-size:10.5px;font-weight:700;white-space:nowrap;
+}
+.mr-card .cprice.sold{background:#2a2a2a;border-color:#555;color:#888}
+.mr-grid{padding-bottom:12px}
+.mr-chest{font-size:64px;line-height:1}
+.mr-chest.open{animation:mrPop .4s ease}
+@keyframes mrPop{0%{transform:scale(.5);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+.mr-btn b{font-weight:700}
 .mr-debug .t{font-size:10px;color:#c88;letter-spacing:.08em}
 </style>
 </head>
@@ -760,16 +786,18 @@ function rollRarity(diffKey){
 }
 
 /** 指定カテゴリ・レアリティから1枚選ぶ。候補が尽きたらレアリティを1段下げる */
-function rollCardOf(cat, rarity, deckSoFar){
+function rollCardOf(cat, rarity, deckSoFar, excludeIds){
   const counts = {};
   for (const inst of deckSoFar) counts[inst.id] = (counts[inst.id] || 0) + 1;
+  const exclude = excludeIds || [];
 
   let idx = RARITY_ORDER.indexOf(rarity);
   if (idx < 0) idx = RARITY_ORDER.indexOf('COMMON');
 
   for (let i = idx; i < RARITY_ORDER.length; i++){
     const r = RARITY_ORDER[i];
-    const all = CARD_LIST.filter(c => c.cat === cat && c.rarity === r && isUnlocked(c.id));
+    const all = CARD_LIST.filter(c => c.cat === cat && c.rarity === r && isUnlocked(c.id)
+                                      && exclude.indexOf(c.id) < 0);
     if (!all.length) continue;
     const fresh = all.filter(c => (counts[c.id] || 0) < 3);
     const pool = fresh.length ? fresh : all;   // 全部3枚に達していたら制限を解除
@@ -819,6 +847,231 @@ function startRun(draft){
   saveGame();
 }
 
+
+/* ===== SECTION: NODES(報酬 / ショップ / 休憩 / イベント / 宝箱) ===== */
+
+const REWARD_RARITY = {
+  NORMAL: [{v:'COMMON',w:65},{v:'UNCOMMON',w:25},{v:'RARE',w:10}],
+  HARD:   [{v:'COMMON',w:62},{v:'UNCOMMON',w:25},{v:'RARE',w:13}],
+};
+const REWARD_GOLD = { COMBAT:[10,20], ELITE:[25,40], BOSS:[50,75] };
+const PRICE = { COMMON:[50,60], UNCOMMON:[75,95], RARE:[150,200], RELIC:[150,300] };
+/** 入手経路ごとに優先度が2倍になるレリック */
+const RELIC_FAVOR = {
+  ELITE:'rel_training_proof', BOSS:'rel_battle_wisdom', TREASURE:'rel_unyielding_plate',
+};
+
+/** 出現しうるレリック(Phase 8 でメタ進行に接続する) */
+function relicPool(){
+  return RELIC_LIST.map(r => r.id);   // TODO(Phase 8): STARTER_RELICS + G.meta.unlockedRelics
+}
+function ownedRelics(){ return G.run ? G.run.relics : []; }
+function availableRelics(){
+  const owned = ownedRelics();
+  return relicPool().filter(id => owned.indexOf(id) < 0);
+}
+/** 未所持レリックを1つ。全て所持済なら null */
+function rollRelic(favorKey){
+  const pool = availableRelics();
+  if (!pool.length) return null;
+  const favor = RELIC_FAVOR[favorKey];
+  return weightedPick(pool.map(id => ({ v:id, w: id === favor ? 2 : 1 })));
+}
+function gainRelic(id){
+  if (!id || G.run.relics.indexOf(id) >= 0) return false;
+  G.run.relics.push(id);
+  saveGame();
+  return true;
+}
+function gainGold(n){ G.run.gold += n; saveGame(); }
+function healPlayer(n){
+  G.run.hp = clamp(G.run.hp + n, 0, G.run.maxHp);
+  saveGame();
+}
+function addCardToDeck(id, upgraded){
+  G.run.deck.push(newCardInstance(id, !!upgraded));
+  saveGame();
+}
+function removeCardFromDeck(inst){
+  const i = G.run.deck.findIndex(c => c.uid === inst.uid);
+  if (i >= 0) G.run.deck.splice(i, 1);
+  saveGame();
+}
+/** 強化できるカード(未強化 かつ up を持つ) */
+function upgradableCards(){
+  return G.run.deck.filter(c => !c.upgraded && CARDS[c.id].up);
+}
+
+/* --- 戦闘報酬 --- */
+
+/** カード報酬: 4カテゴリから重複なしで選び、各カテゴリ1枚ずつ(全カテゴリ均等) */
+function pickRewardCards(diffKey, tier, count){
+  const n = Math.min(count || 3, CATEGORIES.length);
+  const cats = shuffle(CATEGORIES).slice(0, n);
+  const out = [];
+  for (const cat of cats){
+    let rarity = weightedPick(REWARD_RARITY[diffKey] || REWARD_RARITY.NORMAL);
+    // エリート/ボスの報酬は UNCOMMON 以上を保証する
+    if (tier !== 'COMBAT' && rarity === 'COMMON') rarity = 'UNCOMMON';
+    const id = rollCardOf(cat, rarity, [], out);
+    if (id) out.push(id);
+  }
+  return out;
+}
+
+function makeReward(tier){
+  const d = DIFFICULTY[G.run.difficulty];
+  const gr = REWARD_GOLD[tier] || REWARD_GOLD.COMBAT;
+  let gold = Math.floor(range(gr[0], gr[1]) * d.goldMult);
+  gold = fireRelicHookGold(gold);
+  return {
+    tier: tier,
+    gold: gold, goldTaken: false,
+    cards: pickRewardCards(G.run.difficulty, tier, d.rewardChoices || 3),
+    cardTaken: false,
+    relic: tier === 'COMBAT' ? null : rollRelic(tier),
+    relicTaken: false,
+  };
+}
+/** Phase 7 で汗の結晶を差し込むためのフック */
+function fireRelicHookGold(gold){
+  // TODO(Phase 7): fireRelicHook('onBattleWin', {gold})
+  return gold;
+}
+
+/* --- ショップ --- */
+function makeShopStock(){
+  const d = DIFFICULTY[G.run.difficulty];
+  const cards = [];
+  const plan = ['COMMON','COMMON','COMMON','UNCOMMON','RARE'];
+  const cats = shuffle(CATEGORIES);
+  plan.forEach((rarity, i) => {
+    const cat = cats[i % CATEGORIES.length];
+    const id = rollCardOf(cat, rarity, [], cards.map(c => c.id));
+    if (!id) return;
+    const pr = PRICE[CARDS[id].rarity] || PRICE.COMMON;
+    cards.push({ id: id, price: Math.floor(range(pr[0], pr[1]) * d.shopPriceMult), sold:false });
+  });
+  const relics = shuffle(availableRelics()).slice(0, range(2, 3)).map(id => ({
+    id: id, price: Math.floor(range(PRICE.RELIC[0], PRICE.RELIC[1]) * d.shopPriceMult), sold:false,
+  }));
+  return { cards: cards, relics: relics, removeUsed:false };
+}
+
+/* --- 宝箱 --- */
+function makeTreasure(){
+  const d = DIFFICULTY[G.run.difficulty];
+  return {
+    relic: rollRelic('TREASURE'),
+    gold: rnd(100) < 30 ? Math.floor(range(20, 40) * d.goldMult) : 0,
+    opened: false,
+  };
+}
+
+/* --- イベント --- */
+const EVENTS = [
+{ id:'ev_training_ground', title:'廃れた練習場',
+  text:'誰も使わなくなった練習場。器具は錆びているが、まだ使えなくはない。',
+  choices:[
+    { label:'黙々と鍛える', desc:'最大HP+5(現在HPも+5)',
+      run(){ G.run.maxHp += 5; G.run.hp += 5; saveGame();
+             return '体が一回り大きくなった気がする。最大HP+5'; } },
+    { label:'型を見直す', desc:'デッキから1枚をUpgrade',
+      enabled(){ return upgradableCards().length > 0; },
+      why(){ return '強化できるカードがない'; },
+      picker:{ title:'強化するカードを選ぶ', list(){ return upgradableCards(); },
+               done(inst){ inst.upgraded = true; saveGame();
+                           return effectiveCard(inst).name + ' に磨きがかかった'; } } },
+    { label:'立ち去る', desc:'何も起こらない', run(){ return '何もせずに立ち去った。'; } },
+  ]},
+
+{ id:'ev_iron_offering', title:'鉄の供物',
+  text:'台座に鉄塊が供えられている。「痛みと引き換えに」と刻まれていた。',
+  choices:[
+    { label:'血を捧げる', desc:'HP-10 / レリックを1つ獲得',
+      enabled(){ return G.run.hp > 10; },
+      why(){ return 'HPが足りない'; },
+      run(){ G.run.hp -= 10;
+             const id = rollRelic(null);
+             if (id){ gainRelic(id); return 'HPを10失い、' + RELICS[id].name + ' を手に入れた。'; }
+             gainGold(50);
+             return 'HPを10失ったが、レリックは尽きていた。代わりにゴールド+50'; } },
+    { label:'立ち去る', desc:'何も起こらない', run(){ return '嫌な予感がして引き返した。'; } },
+  ]},
+
+{ id:'ev_dusty_shelf', title:'埃まみれの棚',
+  text:'崩れかけた棚。奥に何かが押し込まれている。',
+  choices:[
+    { label:'金目のものを探す', desc:'ゴールド 30〜60 を獲得',
+      run(){ const g = range(30, 60); gainGold(g); return 'ゴールドを' + g + '手に入れた。'; } },
+    { label:'奥まで手を伸ばす', desc:'HP-8 / RARE カードを1枚獲得',
+      run(){ G.run.hp = Math.max(1, G.run.hp - 8);
+             const cat = pick(CATEGORIES);
+             const id = rollCardOf(cat, 'RARE', G.run.deck, []);
+             if (id){ addCardToDeck(id, false);
+                      return '腕を切ったが、' + CARDS[id].name + ' を手に入れた。'; }
+             return '腕を切っただけだった。'; } },
+  ]},
+
+{ id:'ev_purge_altar', title:'削ぎ落としの祭壇',
+  text:'「捨てられぬ者は強くなれぬ」。祭壇はそう告げている。',
+  choices:[
+    { label:'1枚を捨てる', desc:'デッキから1枚を無料で除去',
+      enabled(){ return G.run.deck.length > 1; },
+      why(){ return 'デッキが1枚しかない'; },
+      picker:{ title:'除去するカードを選ぶ', list(){ return G.run.deck.slice(); },
+               done(inst){ const nm = effectiveCard(inst).name; removeCardFromDeck(inst);
+                           return nm + ' を手放した。'; } } },
+    { label:'捧げ物をする', desc:'最大HP+8(現在HPも+8)',
+      run(){ G.run.maxHp += 8; G.run.hp += 8; saveGame(); return '最大HP+8'; } },
+  ]},
+
+{ id:'ev_grudge_shrine', title:'執念の祠',
+  text:'古い祠。捻じれた体の像が置かれている。',
+  choices:[
+    { label:'像に手を合わせる', desc:'執念の記録 を獲得(DEBUFFカードが5枚以上必要)',
+      enabled(){ return countCat('DEBUFF') >= 5 && ownedRelics().indexOf('rel_grudge_record') < 0; },
+      why(){ return ownedRelics().indexOf('rel_grudge_record') >= 0 ? '既に持っている'
+                 : 'デッキのDEBUFFカードが' + countCat('DEBUFF') + '枚(5枚必要)'; },
+      run(){ gainRelic('rel_grudge_record'); return '執念の記録 を手に入れた。'; } },
+    { label:'休んでいく', desc:'HPを20回復',
+      run(){ healPlayer(20); return 'HPを20回復した。'; } },
+  ]},
+
+{ id:'ev_overwork', title:'オーバーワーク',
+  text:'まだやれる。まだやれる。……本当に?',
+  choices:[
+    { label:'追い込む', desc:'HP-5 / 次の戦闘のみ Energy+1',
+      enabled(){ return G.run.hp > 5; },
+      why(){ return 'HPが足りない'; },
+      run(){ G.run.hp -= 5; G.run.tempEnergy = 1; saveGame();
+             return '次の戦闘だけ Energy が1多くなる。'; } },
+    { label:'今日はここまで', desc:'何も起こらない', run(){ return '賢明な判断だ。'; } },
+  ]},
+];
+
+function countCat(cat){
+  return G.run.deck.filter(c => CARDS[c.id].cat === cat).length;
+}
+
+/** 同じランで同じイベントは2回出さない */
+function pickEvent(){
+  const seen = G.run.seenEvents || [];
+  const pool = EVENTS.filter(e => seen.indexOf(e.id) < 0);
+  return (pool.length ? pick(pool) : pick(EVENTS)).id;
+}
+
+/* --- ラン終了 --- */
+function endRun(cleared){
+  const counts = normalizeExercise(G.run.exercise);
+  const d = DIFFICULTY[G.run.difficulty];
+  const rows = EXERCISES.map(ex => {
+    const full = Math.floor(coresFromCount(counts[ex.cat]) * d.coreMult);
+    const got  = cleared ? full : Math.ceil(full * 0.5);   // 敗北時は50%没収(端数切り上げ)
+    return { ex: ex, count: counts[ex.cat], full: full, got: got };
+  });
+  return { cleared: cleared, rows: rows };
+}
 
 /* ===== SECTION: MAP ===== */
 const MAP_ROWS = 7;
@@ -1111,6 +1364,11 @@ function startBattle(enemyIds){
     log: []
   };
   B.drawPile = shuffle(G.run.deck.map(c => ({ uid:c.uid, id:c.id, upgraded:c.upgraded })));
+  if (G.run.tempEnergy){
+    B.maxEnergy += G.run.tempEnergy;
+    log('[オーバーワーク] このバトルは Energy+' + G.run.tempEnergy);
+    G.run.tempEnergy = 0;
+  }
   log('戦闘開始: ' + B.enemies.map(e => e.name).join(' / '));
   // TODO(Phase 7): fireRelicHook('onBattleStart')
   startPlayerTurn();
@@ -1207,6 +1465,7 @@ function dealDamageToEnemy(enemy, amount, opts){
     enemy.hp = 0;
     enemy.alive = false;
     enemy.diedAt = Date.now();
+    G.run.kills = (G.run.kills || 0) + 1;
     log(enemy.name + 'を倒した!');
     onEnemyDeath(enemy);
     scheduleRender(DEATH_ANIM_MS + 60);
@@ -1739,7 +1998,7 @@ function renderTitle(){
 
   s.appendChild(el('div', 'mr-spacer'));
   const foot = el('div', 'mr-note mr-center');
-  foot.innerHTML = 'Phase 5 — 分岐マップ<br>'
+  foot.innerHTML = 'Phase 6 — 報酬・ショップ・休憩・イベント<br>'
     + 'カード ' + Object.keys(CARDS).length + '種 / 敵 ' + Object.keys(ENEMIES).length + '種 / レリック '
     + Object.keys(RELICS).length + '種';
   s.appendChild(foot);
@@ -2181,48 +2440,387 @@ function onHandCardClick(i){
   playCard(i, idx);
 }
 
-/* --- 戦闘後の暫定画面(Phase 6 で本実装) --- */
-function renderBattleResult(kind){
-  const node = currentNode();
-  const s = el('div', 'mr-screen');
-  const ph = el('div', 'mr-placeholder');
-  if (kind === 'REWARD'){
-    ph.appendChild(el('div', 'mr-title', '戦闘に勝利'));
-    ph.appendChild(el('div', 'mr-sub', '報酬画面は Phase 6 で実装'));
-  } else if (kind === 'VICTORY'){
-    ph.appendChild(el('div', 'mr-title', '制覇!'));
-    ph.appendChild(el('div', 'mr-sub', DIFFICULTY[G.run.difficulty].label + ' をクリアした'));
-  } else {
-    ph.appendChild(el('div', 'mr-title', '敗北'));
-    ph.appendChild(el('div', 'mr-sub', 'Phase 6 で実装'));
-  }
-  if (G.battle){
-    ph.appendChild(el('div', 'mr-note',
-      'ターン ' + G.battle.turn + ' / 残HP ' + G.run.hp + '/' + G.run.maxHp));
-  }
-  s.appendChild(ph);
-  if (kind === 'REWARD'){
-    s.appendChild(btn('マップへ戻る', 'primary', () => {
-      G.battle = null; B = null; saveGame(); go('MAP');
-    }));
-  } else {
-    s.appendChild(btn('タイトルへ', 'primary', () => {
-      G.battle = null; B = null; G.run = null; saveGame(); go('TITLE');
+/* --- カード選択モーダル(除去 / 強化 で共用) --- */
+function openCardPicker(opts){
+  const ov = el('div', 'mr-modal');
+  const box = el('div', 'mr-modalbox');
+  box.appendChild(el('div', 'mr-modaltitle', opts.title));
+  if (opts.note) box.appendChild(el('div', 'mr-note', opts.note));
+  const list = el('div', 'mr-modallist');
+  const cards = opts.cards;
+  if (!cards.length) list.appendChild(el('div', 'mr-note', '対象のカードがありません'));
+  for (const inst of cards){
+    const disabled = opts.filter ? !opts.filter(inst) : false;
+    list.appendChild(renderCardEl(inst, {
+      playable: !disabled, disabled: disabled,
+      onClick: () => {
+        if (!confirm(effectiveCard(inst).name + ' を選びますか?')) return;
+        document.body.removeChild(ov);
+        opts.onPick(inst);
+      },
     }));
   }
-  return s;
+  box.appendChild(list);
+  if (opts.cancelable !== false){
+    box.appendChild(btn('やめる', 'ghost', () => document.body.removeChild(ov)));
+  }
+  ov.appendChild(box);
+  ov.addEventListener('click', (e) => {
+    if (e.target === ov && opts.cancelable !== false) document.body.removeChild(ov);
+  });
+  document.body.appendChild(ov);
 }
 
-/* --- 非戦闘ノードの暫定画面(Phase 6 で本実装) --- */
-function renderNodePlaceholder(){
-  const info = PLACEHOLDER_INFO[G.screen] || [G.screen, ''];
+/* --- 戦闘報酬 --- */
+function renderReward(){
+  const run = G.run;
+  if (!run.pendingReward){
+    const node = currentNode();
+    run.pendingReward = makeReward(node ? node.type : 'COMBAT');
+    saveGame();
+  }
+  const rw = run.pendingReward;
+
   const s = el('div', 'mr-screen');
-  const ph = el('div', 'mr-placeholder');
-  ph.appendChild(el('div', 'mr-title', info[0]));
-  ph.appendChild(el('div', 'mr-sub', info[1]));
-  s.appendChild(ph);
-  s.appendChild(btn('マップへ戻る', 'primary', () => go('MAP')));
+  s.appendChild(el('h2', 'mr-title', '戦闘に勝利!'));
+  const scroll = el('div', 'mr-scroll');
+
+  // ゴールド
+  const gp = el('div', 'mr-panel mr-row');
+  gp.appendChild(el('div', '', '💰 ゴールド <b style="color:var(--gold)">' + rw.gold + '</b>'));
+  gp.appendChild(el('div', 'mr-spacer'));
+  if (rw.goldTaken) gp.appendChild(el('span', 'mr-badge', '受取済'));
+  else gp.appendChild(btn('受け取る', 'small primary', () => {
+    gainGold(rw.gold); rw.goldTaken = true; saveGame(); render();
+  }));
+  scroll.appendChild(gp);
+
+  // レリック
+  if (rw.relic){
+    const rp = el('div', 'mr-panel mr-row');
+    const r = RELICS[rw.relic];
+    rp.appendChild(el('div', '', r.icon + ' <b>' + r.name + '</b><br><span class="mr-note">' + r.desc + '</span>'));
+    rp.appendChild(el('div', 'mr-spacer'));
+    if (rw.relicTaken) rp.appendChild(el('span', 'mr-badge', '受取済'));
+    else rp.appendChild(btn('受け取る', 'small primary', () => {
+      gainRelic(rw.relic); rw.relicTaken = true; saveGame(); render();
+    }));
+    scroll.appendChild(rp);
+  }
+
+  // カード
+  scroll.appendChild(el('div', 'mr-cathead',
+    '<span>カードを1枚選ぶ' + (rw.cardTaken ? '(選択済)' : '') + '</span><span class="bar"></span>'));
+  const grid = el('div', 'mr-grid');
+  for (const id of rw.cards){
+    const inst = { uid:-1, id:id, upgraded:false };
+    grid.appendChild(renderCardEl(inst, {
+      playable: !rw.cardTaken, disabled: rw.cardTaken,
+      onClick: () => {
+        addCardToDeck(id, false); rw.cardTaken = true; saveGame(); render();
+      },
+    }));
+  }
+  scroll.appendChild(grid);
+  s.appendChild(scroll);
+
+  const foot = el('div', 'mr-sticky');
+  if (!rw.cardTaken){
+    foot.appendChild(btn('カードを取らずに進む(スキップ)', 'ghost', () => {
+      rw.cardTaken = true; saveGame(); render();
+    }));
+  }
+  foot.appendChild(btn('マップへ戻る', 'primary', () => {
+    if (!rw.goldTaken) gainGold(rw.gold);
+    if (rw.relic && !rw.relicTaken) gainRelic(rw.relic);
+    run.pendingReward = null;
+    G.battle = null; B = null;
+    saveGame(); go('MAP');
+  }));
+  s.appendChild(foot);
   return [renderHud(), s];
+}
+
+/* --- 休憩所 --- */
+function renderRest(){
+  const run = G.run;
+  const node = currentNode();
+  const d = DIFFICULTY[run.difficulty];
+  const heal = Math.ceil(run.maxHp * d.restHealRate);
+  const s = el('div', 'mr-screen');
+  s.appendChild(el('h2', 'mr-title', '🔥 休憩所'));
+  const nextIsBoss = node && node.row === BOSS_ROW - 1;
+  if (nextIsBoss) s.appendChild(el('div', 'mr-warn', '⚠ 次はボス戦です'));
+  s.appendChild(el('p', 'mr-sub', 'どちらか1つだけ選べます。'));
+
+  if (node && node.restDone){
+    s.appendChild(el('div', 'mr-panel', node.restResult || '休憩を終えた。'));
+    s.appendChild(el('div', 'mr-spacer'));
+    s.appendChild(btn('マップへ戻る', 'primary', () => go('MAP')));
+    return [renderHud(), s];
+  }
+
+  const restBtn = btn('🔥 休む<br><span class="mr-note">HPを ' + heal + ' 回復(最大HPの'
+    + Math.round(d.restHealRate * 100) + '%)</span>', '', () => {
+    const before = run.hp;
+    healPlayer(heal);
+    node.restDone = true;
+    node.restResult = 'HPを' + (run.hp - before) + '回復した。(' + run.hp + '/' + run.maxHp + ')';
+    saveGame(); render();
+  });
+  s.appendChild(restBtn);
+
+  const ups = upgradableCards();
+  const upBtn = btn('⚒ 鍛える<br><span class="mr-note">'
+    + (ups.length ? 'デッキから1枚を強化(+)' : '強化できるカードがない') + '</span>', '', () => {
+    openCardPicker({
+      title: '強化するカードを選ぶ',
+      cards: ups,
+      onPick(inst){
+        inst.upgraded = true;
+        node.restDone = true;
+        node.restResult = effectiveCard(inst).name + ' に強化した。';
+        saveGame(); render();
+      },
+    });
+  });
+  upBtn.disabled = !ups.length;
+  s.appendChild(upBtn);
+
+  s.appendChild(el('div', 'mr-spacer'));
+  s.appendChild(btn('何もせず先へ進む', 'ghost', () => {
+    node.restDone = true; node.restResult = '何もせず先へ進んだ。'; saveGame(); go('MAP');
+  }));
+  return [renderHud(), s];
+}
+
+/* --- ショップ --- */
+function renderShop(){
+  const run = G.run;
+  const node = currentNode();
+  if (node && !node.shopStock){ node.shopStock = makeShopStock(); saveGame(); }
+  const stock = node ? node.shopStock : makeShopStock();
+
+  const s = el('div', 'mr-screen');
+  s.appendChild(el('h2', 'mr-title', '🏪 ショップ'));
+  const scroll = el('div', 'mr-scroll');
+
+  scroll.appendChild(el('div', 'mr-cathead', '<span>カード</span><span class="bar"></span>'));
+  const grid = el('div', 'mr-grid');
+  for (const item of stock.cards){
+    const inst = { uid:-1, id:item.id, upgraded:false };
+    const afford = run.gold >= item.price && !item.sold;
+    const node2 = renderCardEl(inst, {
+      playable: afford, disabled: !afford,
+      onClick: () => {
+        if (run.gold < item.price) return;
+        run.gold -= item.price; item.sold = true;
+        addCardToDeck(item.id, false); saveGame(); render();
+      },
+    });
+    node2.appendChild(el('div', 'cprice' + (item.sold ? ' sold' : ''),
+      item.sold ? 'SOLD' : item.price + 'G'));
+    grid.appendChild(node2);
+  }
+  scroll.appendChild(grid);
+
+  scroll.appendChild(el('div', 'mr-cathead', '<span>レリック</span><span class="bar"></span>'));
+  for (const item of stock.relics){
+    const r = RELICS[item.id];
+    const row = el('div', 'mr-panel mr-row');
+    row.appendChild(el('div', '', r.icon + ' <b>' + r.name + '</b><br><span class="mr-note">' + r.desc + '</span>'));
+    row.appendChild(el('div', 'mr-spacer'));
+    if (item.sold) row.appendChild(el('span', 'mr-badge', 'SOLD'));
+    else {
+      const bb = btn(item.price + 'G', 'small' + (run.gold >= item.price ? ' primary' : ''), () => {
+        if (run.gold < item.price) return;
+        run.gold -= item.price; item.sold = true; gainRelic(item.id); saveGame(); render();
+      });
+      bb.disabled = run.gold < item.price;
+      row.appendChild(bb);
+    }
+    scroll.appendChild(row);
+  }
+
+  scroll.appendChild(el('div', 'mr-cathead', '<span>カード除去</span><span class="bar"></span>'));
+  const rem = el('div', 'mr-panel mr-row');
+  rem.appendChild(el('div', '', 'デッキから1枚を取り除く<br><span class="mr-note">次回は '
+    + (run.removeCost + 25) + 'G に上昇</span>'));
+  rem.appendChild(el('div', 'mr-spacer'));
+  const canRemove = run.gold >= run.removeCost && run.deck.length > 1;
+  const rb = btn(run.removeCost + 'G', 'small' + (canRemove ? ' primary' : ''), () => {
+    openCardPicker({
+      title: '除去するカードを選ぶ',
+      note: run.removeCost + 'G を支払います',
+      cards: run.deck.slice(),
+      onPick(inst){
+        run.gold -= run.removeCost;
+        run.removeCost += 25;
+        removeCardFromDeck(inst);
+        saveGame(); render();
+      },
+    });
+  });
+  rb.disabled = !canRemove;
+  rem.appendChild(rb);
+  scroll.appendChild(rem);
+
+  s.appendChild(scroll);
+  const foot = el('div', 'mr-sticky');
+  foot.appendChild(btn('デッキを見る', 'ghost', () => openCardPicker({
+    title: '現在のデッキ(' + run.deck.length + '枚)', cards: run.deck.slice(),
+    filter: () => false, onPick(){},
+  })));
+  foot.appendChild(btn('立ち去る', 'primary', () => go('MAP')));
+  s.appendChild(foot);
+  return [renderHud(), s];
+}
+
+/* --- 宝箱 --- */
+function renderTreasure(){
+  const node = currentNode();
+  if (node && !node.treasure){ node.treasure = makeTreasure(); saveGame(); }
+  const t = node ? node.treasure : makeTreasure();
+
+  const s = el('div', 'mr-screen');
+  s.appendChild(el('h2', 'mr-title', '🎁 宝箱'));
+  const ph = el('div', 'mr-placeholder');
+
+  if (!t.opened){
+    ph.appendChild(el('div', 'mr-chest', '🎁'));
+    ph.appendChild(el('div', 'mr-sub', '埃をかぶった箱がある'));
+    s.appendChild(ph);
+    s.appendChild(btn('開ける', 'primary', () => {
+      t.opened = true;
+      if (t.relic) gainRelic(t.relic); else t.gold += 50;   // 全所持済ならゴールド50
+      if (t.gold) gainGold(t.gold);
+      saveGame(); render();
+    }));
+  } else {
+    ph.appendChild(el('div', 'mr-chest open', '✨'));
+    if (t.relic){
+      const r = RELICS[t.relic];
+      ph.appendChild(el('div', 'mr-title', r.icon + ' ' + r.name));
+      ph.appendChild(el('div', 'mr-sub', r.desc));
+    } else {
+      ph.appendChild(el('div', 'mr-sub', 'レリックは尽きていた'));
+    }
+    if (t.gold) ph.appendChild(el('div', '', '💰 ゴールド +' + t.gold));
+    s.appendChild(ph);
+    s.appendChild(btn('マップへ戻る', 'primary', () => go('MAP')));
+  }
+  return [renderHud(), s];
+}
+
+/* --- イベント --- */
+function renderEvent(){
+  const run = G.run;
+  const node = currentNode();
+  if (node && !node.eventId){
+    node.eventId = pickEvent();
+    if (!run.seenEvents) run.seenEvents = [];
+    if (run.seenEvents.indexOf(node.eventId) < 0) run.seenEvents.push(node.eventId);
+    saveGame();
+  }
+  const ev = EVENTS.find(e => e.id === (node ? node.eventId : null)) || EVENTS[0];
+
+  const s = el('div', 'mr-screen');
+  s.appendChild(el('h2', 'mr-title', '❓ ' + ev.title));
+  s.appendChild(el('div', 'mr-panel', ev.text));
+
+  if (node && node.eventResult != null){
+    s.appendChild(el('div', 'mr-panel mr-result', node.eventResult));
+    s.appendChild(el('div', 'mr-spacer'));
+    s.appendChild(btn('マップへ戻る', 'primary', () => go('MAP')));
+    return [renderHud(), s];
+  }
+
+  for (const ch of ev.choices){
+    const ok = ch.enabled ? ch.enabled() : true;
+    const why = ok ? '' : '<br><span class="mr-locked">条件未達: ' + (ch.why ? ch.why() : '') + '</span>';
+    const b = btn('<b>' + ch.label + '</b><br><span class="mr-note">' + ch.desc + '</span>' + why, '', () => {
+      if (ch.picker){
+        openCardPicker({
+          title: ch.picker.title,
+          cards: ch.picker.list(),
+          onPick(inst){ node.eventResult = ch.picker.done(inst); saveGame(); render(); },
+        });
+      } else {
+        node.eventResult = ch.run();
+        saveGame(); render();
+      }
+    });
+    b.disabled = !ok;
+    s.appendChild(b);
+  }
+  s.appendChild(el('div', 'mr-spacer'));
+  return [renderHud(), s];
+}
+
+/* --- 敗北 / 制覇 --- */
+const DEFEAT_MESSAGES = [
+  '倒れた回数だけ、明日の筋肉になる。',
+  '今日の運動は無駄にならない。半分は持ち帰った。',
+  'デッキが弱かったんじゃない。回数が足りなかっただけだ。',
+];
+
+function renderRunEnd(cleared){
+  const run = G.run;
+  const result = endRun(cleared);
+  const s = el('div', 'mr-screen');
+  const scroll = el('div', 'mr-scroll');
+
+  const head = el('div', 'mr-center');
+  head.appendChild(el('h2', 'mr-title', cleared ? '制覇!' : '敗北'));
+  head.appendChild(el('p', 'mr-sub',
+    DIFFICULTY[run.difficulty].label + ' / 到達 Row ' + Math.max(0, run.currentRow)
+    + ' / 撃破 ' + (run.kills || 0) + '体'));
+  scroll.appendChild(head);
+
+  if (!cleared){
+    scroll.appendChild(el('div', 'mr-panel mr-result', pick(DEFEAT_MESSAGES)));
+  }
+
+  // 筋力コア
+  const cp = el('div', 'mr-panel');
+  cp.appendChild(el('div', 'mr-note', '筋力コア' + (cleared ? '' : '(敗北につき50%没収)')));
+  const t = el('table', 'mr-table');
+  t.innerHTML = '<thead><tr><th>種目</th><th>換算</th><th>獲得予定</th><th>実際</th></tr></thead>';
+  const tb = el('tbody');
+  for (const r of result.rows){
+    const tr = el('tr');
+    tr.innerHTML = '<td>' + r.ex.coreLabel + '</td><td>' + r.count + '</td>'
+      + '<td' + (cleared ? '' : ' style="color:var(--dim)"') + '>' + r.full + '</td>'
+      + '<td><b>' + r.got + '</b></td>';
+    tb.appendChild(tr);
+  }
+  t.appendChild(tb);
+  cp.appendChild(t);
+  cp.appendChild(el('div', 'mr-note', '※ 付与は Phase 8(永続進行)で実装'));
+  scroll.appendChild(cp);
+
+  // 最終デッキ
+  scroll.appendChild(el('div', 'mr-cathead',
+    '<span>最終デッキ ' + run.deck.length + '枚</span><span class="bar"></span>'));
+  scroll.appendChild(renderDeckList(run.deck, {}));
+  s.appendChild(scroll);
+
+  const foot = el('div', 'mr-sticky');
+  if (!cleared){
+    foot.appendChild(btn('もう一度挑む', 'primary', () => {
+      const ex = Object.assign({}, run.exercise);
+      const diff = run.difficulty;
+      G.battle = null; B = null; G.run = null;
+      G.draft = newDraft(diff);
+      G.draft.exercise = ex;
+      saveGame(); go('EXERCISE');
+    }));
+  }
+  foot.appendChild(btn('タイトルへ', cleared ? 'primary' : 'ghost', () => {
+    G.battle = null; B = null; G.run = null; saveGame(); go('TITLE');
+  }));
+  s.appendChild(foot);
+  return s;
 }
 
 /* --- マップ画面 --- */
@@ -2319,9 +2917,20 @@ const RENDERERS = {
   DECK_PREVIEW: renderDeckPreview,
   MAP: renderMap,
   BATTLE: renderBattle,
-  REWARD: () => renderBattleResult(true),
-  GAMEOVER: () => renderBattleResult(false)
+  REWARD:   renderReward,
+  VICTORY:  function(){ return renderRunEnd(true); },
+  GAMEOVER: function(){ return renderRunEnd(false); },
+  SHOP:     renderShop,
+  REST:     renderRest,
+  EVENT:    renderEvent,
+  TREASURE: renderTreasure,
 };
+
+// 画面と描画関数の対応漏れを起動時に検出する
+for (const k in RENDERERS){
+  if (SCREENS.indexOf(k) < 0) throw new Error('RENDERERS に未知の画面: ' + k);
+  if (typeof RENDERERS[k] !== 'function') throw new Error('RENDERERS[' + k + '] が関数でない');
+}
 
 /* --- デバッグパネル --- */
 function renderDebugPanel(){
@@ -2408,6 +3017,8 @@ window.MROG = { G, CARDS, CARD_LIST, ENEMIES, RELICS, DIFFICULTY, NODE_WEIGHTS,
   ENCOUNTERS, pickEncounter, syncPhase, phaseIndexFor, phaseThreshold, intentText,
   generateMap, validateMap, mapProblems, mapNodes, selectableNodes, enterNode, currentNode,
   MAP_ROWS, MAP_COLS, BOSS_ROW,
+  makeReward, pickRewardCards, makeShopStock, makeTreasure, EVENTS, pickEvent,
+  endRun, relicPool, availableRelics, rollRelic, gainRelic, upgradableCards, PRICE,
   get battle(){ return G.battle; } };
 </script>
 </body>
