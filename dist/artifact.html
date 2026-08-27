@@ -1,0 +1,3578 @@
+<title>筋トレ融合ローグライク</title>
+<style>
+/* Artifact のリセットに body の余白が残らないよう明示する */
+html, body { margin: 0; padding: 0; }
+/* ===== SECTION: STYLE ===== */
+:root{
+  --bg:#14161c; --panel:#1e222c; --panel2:#252a36; --line:#333a48;
+  --text:#e8ecf2; --dim:#8b93a5;
+  --atk:#e2574c; --skl:#4caf7d; --dbf:#a86fd6; --pwr:#4a90d9;
+  --hp:#d0453c; --block:#5a9fd4; --energy:#e8c34a; --gold:#e8c34a;
+  --rare:#e8c34a; --uncommon:#5a9fd4; --common:#8b93a5; --basic:#5c6474;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+  font-size:15px; line-height:1.6; overscroll-behavior:none;
+}
+#app{max-width:480px;margin:0 auto;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+
+.mr-screen{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;padding:16px;gap:14px}
+.mr-title{font-size:22px;font-weight:700;letter-spacing:.04em;margin:0}
+.mr-sub{color:var(--dim);font-size:13px;margin:0}
+.mr-panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.mr-row{display:flex;gap:8px;align-items:center}
+.mr-spacer{flex:1}
+.mr-center{text-align:center}
+
+.mr-btn{
+  appearance:none;border:1px solid var(--line);background:var(--panel2);color:var(--text);
+  font:inherit;font-weight:600;padding:12px 16px;border-radius:9px;cursor:pointer;
+  transition:background .12s,border-color .12s,transform .06s;width:100%;
+}
+.mr-btn:hover:not(:disabled){background:#2e3444;border-color:#4a5468}
+.mr-btn:active:not(:disabled){transform:translateY(1px)}
+.mr-btn:disabled{opacity:.4;cursor:default}
+.mr-btn.primary{background:linear-gradient(180deg,#3a6ea8,#2f5a8a);border-color:#4a80bd}
+.mr-btn.primary:hover{background:linear-gradient(180deg,#4479b6,#356397)}
+.mr-btn.ghost{background:transparent}
+.mr-btn.small{padding:8px 12px;font-size:13px;width:auto}
+
+/* HUD */
+.mr-hud{
+  display:flex;align-items:center;gap:10px;padding:8px 12px;
+  background:var(--panel);border-bottom:1px solid var(--line);font-size:13px;flex-wrap:wrap;
+}
+.mr-hud .chip{display:flex;align-items:center;gap:4px;white-space:nowrap}
+.mr-hud .hpv{color:var(--hp);font-weight:700}
+.mr-hud .goldv{color:var(--gold);font-weight:700}
+.mr-badge{
+  font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--dim);
+}
+.mr-badge.hard{color:#f0a04a;border-color:#7a5a30;background:#2a2018}
+
+/* コア表示 */
+.mr-cores{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mr-core{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:10px 6px;text-align:center}
+.mr-core .n{font-size:20px;font-weight:700;line-height:1.2}
+.mr-core .l{font-size:11px;color:var(--dim)}
+.mr-core.chest .n{color:var(--atk)} .mr-core.leg .n{color:var(--skl)}
+.mr-core.twist .n{color:var(--dbf)} .mr-core.core .n{color:var(--pwr)}
+
+/* カード */
+.mr-card{
+  position:relative;width:104px;min-height:146px;border-radius:9px;padding:8px;
+  background:linear-gradient(180deg,var(--panel2),#1a1e28);
+  border:1.5px solid var(--line);display:flex;flex-direction:column;gap:5px;
+  font-size:11px;line-height:1.4;cursor:default;flex:0 0 auto;
+}
+.mr-card .cname{font-size:12px;font-weight:700;line-height:1.25;padding-left:19px;min-height:15px}
+.mr-card .ctext{color:#cfd6e2;flex:1}
+.mr-card .ccost{
+  position:absolute;top:-6px;left:-6px;width:23px;height:23px;border-radius:50%;
+  background:var(--energy);color:#241d05;font-weight:800;font-size:13px;
+  display:flex;align-items:center;justify-content:center;border:2px solid #14161c;
+}
+.mr-card .ctag{font-size:10px;color:var(--dim);letter-spacing:.04em}
+.mr-card.cat-ATTACK{border-color:var(--atk)} .mr-card.cat-SKILL{border-color:var(--skl)}
+.mr-card.cat-DEBUFF{border-color:var(--dbf)} .mr-card.cat-POWER{border-color:var(--pwr)}
+.mr-card.rar-RARE{box-shadow:0 0 0 1px var(--rare) inset}
+.mr-card.upgraded .cname{color:var(--rare)}
+.mr-card.playable{cursor:pointer}
+.mr-card.playable:hover{transform:translateY(-4px);transition:transform .1s}
+.mr-card.disabled{opacity:.45}
+.mr-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+
+.mr-note{color:var(--dim);font-size:12px}
+.mr-hr{height:1px;background:var(--line);border:0;margin:4px 0}
+.mr-placeholder{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;color:var(--dim);text-align:center;
+}
+.mr-debug{
+  position:fixed;right:8px;bottom:8px;z-index:99;background:#2a1a1a;border:1px solid #6a3a3a;
+  border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:6px;max-width:170px;
+}
+
+/* 難易度選択 */
+.mr-diff{display:flex;flex-direction:column;gap:10px}
+.mr-diffbtn{
+  text-align:left;border:1.5px solid var(--line);background:var(--panel2);color:var(--text);
+  font:inherit;padding:14px;border-radius:10px;cursor:pointer;transition:border-color .12s,background .12s;
+}
+.mr-diffbtn:hover{background:#2e3444}
+.mr-diffbtn .dn{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px}
+.mr-diffbtn .dd{font-size:12px;color:var(--dim);margin-top:6px;line-height:1.7}
+.mr-diffbtn.normal{border-color:#3f6b93} .mr-diffbtn.normal .dn{color:#7fb6e6}
+.mr-diffbtn.hard{border-color:#8a5a2a}   .mr-diffbtn.hard   .dn{color:#f0a04a}
+
+/* 運動入力 */
+.mr-ex{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.mr-ex .exhead{display:flex;align-items:baseline;gap:8px}
+.mr-ex .exname{font-weight:700;font-size:14px}
+.mr-ex .excat{font-size:11px;padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--dim)}
+.mr-ex.cat-ATTACK .excat{color:var(--atk);border-color:var(--atk)}
+.mr-ex.cat-SKILL  .excat{color:var(--skl);border-color:var(--skl)}
+.mr-ex.cat-DEBUFF .excat{color:var(--dbf);border-color:var(--dbf)}
+.mr-ex.cat-POWER  .excat{color:var(--pwr);border-color:var(--pwr)}
+.mr-ex .exinput{display:flex;gap:6px;align-items:center}
+.mr-ex input[type=number]{
+  flex:1;min-width:0;font:inherit;font-size:19px;font-weight:700;text-align:center;
+  background:#12151b;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 4px;
+}
+.mr-ex input[type=number]::-webkit-outer-spin-button,
+.mr-ex input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.mr-ex input[type=number]{-moz-appearance:textfield}
+.mr-step{
+  font:inherit;font-size:12px;font-weight:700;background:var(--panel2);color:var(--text);
+  border:1px solid var(--line);border-radius:7px;padding:8px 0;cursor:pointer;min-width:38px;
+}
+.mr-step:hover{background:#2e3444}
+.mr-ex .exout{font-size:12px;color:var(--dim);display:flex;gap:10px;flex-wrap:wrap}
+.mr-ex .exout b{color:var(--text)}
+.mr-ex .exout .zero{color:#6a7183}
+
+.mr-table{width:100%;border-collapse:collapse;font-size:12px}
+.mr-table th,.mr-table td{border-bottom:1px solid var(--line);padding:6px 4px;text-align:right}
+.mr-table th:first-child,.mr-table td:first-child{text-align:left}
+.mr-table th{color:var(--dim);font-weight:600}
+.mr-table td b{font-size:14px}
+
+.mr-cathead{
+  display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;margin:2px 0;
+}
+.mr-cathead .bar{flex:1;height:1px;background:var(--line)}
+.mr-cathead.ATTACK{color:var(--atk)} .mr-cathead.SKILL{color:var(--skl)}
+.mr-cathead.DEBUFF{color:var(--dbf)} .mr-cathead.POWER{color:var(--pwr)}
+.mr-scroll{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;min-height:0}
+.mr-sticky{flex:0 0 auto;background:var(--bg);padding-top:8px;display:flex;flex-direction:column;gap:8px}
+
+/* 戦闘 */
+.mr-battle{gap:10px;padding:12px}
+.mr-enemies{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding-top:6px}
+.mr-enemy{
+  background:var(--panel);border:1.5px solid var(--line);border-radius:10px;padding:10px;
+  min-width:132px;max-width:190px;flex:1 1 auto;display:flex;flex-direction:column;gap:6px;
+}
+.mr-enemy.targetable{border-color:var(--atk);cursor:pointer;box-shadow:0 0 12px rgba(226,87,76,.35)}
+.mr-enemy.targetable:hover{background:#2a1f22}
+.mr-enemy .eintent{font-size:15px;font-weight:800;color:#ffb4ac;min-height:22px;text-align:center}
+.mr-enemy .ename{font-size:13px;font-weight:700;text-align:center;line-height:1.3}
+.mr-bar{position:relative;height:16px;background:#0f1218;border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.mr-bar .fill{height:100%;background:linear-gradient(180deg,#e2574c,#a63a32);transition:width .18s}
+.mr-bar.hp .fill{background:linear-gradient(180deg,#d0453c,#8e2f28)}
+.mr-bar .barlabel{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:10.5px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.9);
+}
+.estat{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;min-height:0}
+.estat span{font-size:11px;padding:1px 6px;border-radius:99px;background:#161a22;border:1px solid var(--line)}
+.estat .sblock{color:var(--block);border-color:#3b6d96}
+.estat .weak{color:#9ad0ff} .estat .vulnerable{color:#ffa0a0}
+.estat .bleed{color:#ff7b7b} .estat .strength{color:#ffcf6b}
+.estat .evade{color:#8fe0b6} .estat .counter{color:#d6a0f0}
+.estat .power{color:var(--pwr);border-color:#3b6d96}
+
+.mr-enemy.dead{animation:mrDie .34s ease forwards;pointer-events:none}
+@keyframes mrDie{
+  0%{opacity:1}
+  100%{opacity:0;transform:scale(.86) translateY(8px)}
+}
+.mr-enemy.enraged{border-color:#e2574c;box-shadow:0 0 14px rgba(226,87,76,.3)}
+.mr-enemy.enraged .ename{color:#ff9a90}
+.mr-bar .phasemark{position:absolute;top:0;bottom:0;width:2px;background:rgba(255,255,255,.55);transform:translateX(-1px)}
+.mr-pstat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px}
+.mr-log{
+  background:#10131a;border:1px solid var(--line);border-radius:8px;padding:7px 9px;
+  font-size:11.5px;color:#a8b0c0;line-height:1.55;max-height:92px;overflow-y:auto;
+}
+.mr-log div+div{margin-top:1px}
+.mr-bbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.mr-energy{
+  background:#3a3106;border:1.5px solid var(--energy);color:var(--energy);
+  border-radius:99px;padding:4px 12px;font-size:13px;font-weight:700;
+}
+.mr-energy b{font-size:17px}
+.mr-energy.on{box-shadow:0 0 10px rgba(232,195,74,.3)}
+.mr-pile{font-size:11px;color:var(--dim);border:1px solid var(--line);border-radius:6px;padding:4px 7px}
+.mr-hint{font-size:11.5px;color:#ffb4ac;text-align:center}
+.mr-hand{
+  display:flex;gap:7px;overflow-x:auto;padding:8px 2px 4px;min-height:160px;align-items:flex-start;
+  scrollbar-width:thin;
+}
+.mr-hand .mr-card{width:98px;min-height:142px}
+.mr-card.selected{outline:2px solid var(--energy);outline-offset:2px;transform:translateY(-6px)}
+
+/* マップ */
+.mr-mapscreen{padding:10px;gap:8px}
+.mr-maphead{font-size:12.5px;color:var(--dim);text-align:center}
+.mr-mapscroll{flex:1;min-height:0;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:#10131a}
+.mr-mapwrap{position:relative;width:100%}
+.mr-mapedges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.mr-mapedges .edge{stroke:#2c3342;stroke-width:2;stroke-dasharray:4 4}
+.mr-mapedges .edge.active{stroke:#6f8fb8;stroke-width:2.5;stroke-dasharray:none}
+.mr-node{
+  position:absolute;transform:translateX(-50%);width:46px;
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+}
+.mr-node .icon{
+  width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:19px;background:#1a1e27;border:2px solid #2c3342;color:#5f6878;
+  transition:transform .12s,box-shadow .12s;
+}
+.mr-node .nlabel{font-size:9px;color:#5a6474;white-space:nowrap;background:#10131a;padding:0 4px;border-radius:3px}
+.mr-node .check{position:absolute;top:-2px;right:-2px;font-size:12px;color:#5fa87a}
+.mr-node.visited .icon{border-color:#3a4453;color:#8b93a5;background:#20252f}
+.mr-node.current .icon{border-color:var(--text);color:var(--text);box-shadow:0 0 0 3px rgba(232,236,242,.15)}
+.mr-node.selectable{cursor:pointer}
+.mr-node.selectable .icon{color:#fff;background:#26303f;border-color:#7fb6e6;box-shadow:0 0 14px rgba(127,182,230,.45)}
+.mr-node.selectable .nlabel{color:#9fb4cc}
+.mr-node.selectable:hover .icon{transform:scale(1.12)}
+.mr-node.selectable.t-ELITE .icon{border-color:#e0904a;box-shadow:0 0 14px rgba(224,144,74,.45)}
+.mr-node.selectable.t-REST  .icon{border-color:#6fc48d;box-shadow:0 0 14px rgba(111,196,141,.45)}
+.mr-node.selectable.t-SHOP  .icon{border-color:#e8c34a;box-shadow:0 0 14px rgba(232,195,74,.4)}
+.mr-node.t-BOSS .icon{width:52px;height:52px;font-size:23px}
+.mr-node.selectable.t-BOSS .icon{border-color:#e2574c;box-shadow:0 0 18px rgba(226,87,76,.5)}
+.mr-legend{display:flex;flex-wrap:wrap;gap:6px 10px;justify-content:center;font-size:10.5px;color:var(--dim)}
+
+/* モーダル / ノード画面 */
+.mr-modal{
+  position:fixed;inset:0;background:rgba(8,10,14,.82);z-index:200;
+  display:flex;align-items:center;justify-content:center;padding:16px;
+}
+.mr-modalbox{
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;
+  width:100%;max-width:460px;max-height:86vh;display:flex;flex-direction:column;gap:10px;
+}
+.mr-modaltitle{font-size:15px;font-weight:700}
+.mr-modallist{flex:1;min-height:0;overflow-y:auto;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:4px}
+.mr-result{border-left:3px solid var(--pwr);color:#cfe0f2}
+.mr-warn{background:#2a2018;border:1px solid #7a5a30;color:#f0a04a;border-radius:8px;padding:8px 10px;font-size:12.5px;text-align:center}
+.mr-locked{color:#c56a6a;font-size:11px}
+.mr-card .cprice{
+  position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);
+  background:#3a3106;border:1px solid var(--gold);color:var(--gold);
+  border-radius:99px;padding:1px 9px;font-size:10.5px;font-weight:700;white-space:nowrap;
+}
+.mr-card .cprice.sold{background:#2a2a2a;border-color:#555;color:#888}
+.mr-grid{padding-bottom:12px}
+.mr-chest{font-size:64px;line-height:1}
+.mr-chest.open{animation:mrPop .4s ease}
+@keyframes mrPop{0%{transform:scale(.5);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+.mr-btn b{font-weight:700}
+
+/* レリック */
+.mr-relics{cursor:pointer;display:flex;gap:3px;align-items:center}
+.mr-relics .relic{font-size:15px;line-height:1;display:inline-block;border-radius:50%}
+.mr-relics .relic.flash{animation:mrRelic .6s ease}
+@keyframes mrRelic{
+  0%{transform:scale(1);filter:none}
+  35%{transform:scale(1.5);filter:drop-shadow(0 0 8px #ffe9a0)}
+  100%{transform:scale(1);filter:none}
+}
+.mr-toast{
+  position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:300;
+  background:#232936;border:1px solid #4a5468;border-radius:10px;padding:9px 16px;
+  font-size:12.5px;text-align:center;color:var(--text);box-shadow:0 6px 20px rgba(0,0,0,.5);
+  animation:mrToast 2.6s ease forwards;pointer-events:none;
+}
+@keyframes mrToast{
+  0%{opacity:0;transform:translate(-50%,10px)}
+  10%,80%{opacity:1;transform:translate(-50%,0)}
+  100%{opacity:0;transform:translate(-50%,-6px)}
+}
+
+/* 強化所 */
+.mr-tabs{display:flex;gap:5px}
+.mr-tab{
+  flex:1;font:inherit;font-size:12px;font-weight:600;padding:8px 4px;cursor:pointer;
+  background:var(--panel);color:var(--dim);border:1px solid var(--line);border-radius:8px;
+}
+.mr-tab.on{background:var(--panel2);color:var(--text);border-color:#4a5468}
+.mr-grow{flex:1;min-width:0;font-size:13px}
+.mr-panel.owned{opacity:.6}
+.mr-diffbtn.locked{opacity:.55;cursor:default}
+
+/* 演出 */
+.mr-pop{
+  position:fixed;z-index:250;transform:translate(-50%,-50%);pointer-events:none;
+  font-size:19px;font-weight:800;text-shadow:0 2px 4px rgba(0,0,0,.85);
+  animation:mrPop2 .9s ease-out forwards;
+}
+.mr-pop.dmg{color:#ffffff}
+.mr-pop.hurt{color:#ff7a70;font-size:22px}
+.mr-pop.blk{color:#8ec8f0;font-size:16px}
+@keyframes mrPop2{
+  0%{opacity:0;transform:translate(-50%,-30%) scale(.7)}
+  18%{opacity:1;transform:translate(-50%,-55%) scale(1.1)}
+  70%{opacity:1;transform:translate(-50%,-90%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-130%) scale(.95)}
+}
+#app.shaking{animation:mrShake .14s linear}
+@keyframes mrShake{
+  0%,100%{transform:translateX(0)}
+  25%{transform:translateX(-5px)}
+  75%{transform:translateX(5px)}
+}
+.mr-enemy.attacking{animation:mrLunge .26s ease}
+@keyframes mrLunge{
+  0%,100%{transform:translateY(0)}
+  40%{transform:translateY(9px) scale(1.03)}
+}
+.mr-pile{cursor:pointer}
+.mr-pile:hover{border-color:#4a5468;color:var(--text)}
+.mr-card{user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.mr-debug .t{font-size:10px;color:#c88;letter-spacing:.08em}
+</style>
+<div id="app"></div>
+<script>
+"use strict";
+
+/* ===== SECTION: UTIL ===== */
+const rnd   = (n) => Math.floor(Math.random() * n);
+const pick  = (arr) => arr[rnd(arr.length)];
+const range = (min, max) => min + rnd(max - min + 1);
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+function shuffle(arr){
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--){
+    const j = rnd(i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/** entries: [{v, w}] → w の重みで v を1つ返す */
+function weightedPick(entries){
+  let total = 0;
+  for (const e of entries) total += e.w;
+  if (total <= 0) return entries.length ? entries[0].v : null;
+  let r = Math.random() * total;
+  for (const e of entries){ r -= e.w; if (r < 0) return e.v; }
+  return entries[entries.length - 1].v;
+}
+
+function el(tag, cls, html){
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (html != null) n.innerHTML = html;
+  return n;
+}
+function btn(label, cls, onClick){
+  const b = el('button', 'mr-btn ' + (cls || ''), label);
+  b.addEventListener('click', onClick);
+  return b;
+}
+function deepClone(o){ return JSON.parse(JSON.stringify(o)); }
+
+const DEBUG = new URLSearchParams(location.search).get('debug') === '1';
+
+
+/* ===== SECTION: DATA ===== */
+
+/* --- カード ---
+ * effects の type 一覧(解決処理は Phase 2/3):
+ *   damage / damageMulti / block / draw / energy / status / strength /
+ *   evade / counter / blockPerTurn / reflect / blockOnPower / blockBonus /
+ *   keepBlock / damagePerAttackPlayed / damagePerAttackInHand
+ * up は effects を全置換する差分。exhaust を上書きすることもある。
+ */
+const CARD_LIST = [
+/* --- ATTACK(腕立て伏せ / 胸コア) --- */
+{ id:'atk_punch', name:'パンチ', cat:'ATTACK', rarity:'BASIC', cost:1, type:'attack', target:'single',
+  effects:[{type:'damage',value:6}],
+  up:{ effects:[{type:'damage',value:9}] } },
+
+{ id:'atk_double_punch', name:'ダブルパンチ', cat:'ATTACK', rarity:'BASIC', cost:1, type:'attack', target:'single',
+  effects:[{type:'damageMulti',value:3,times:2}],
+  up:{ effects:[{type:'damageMulti',value:4,times:2}] } },
+
+{ id:'atk_body_blow', name:'ボディブロー', cat:'ATTACK', rarity:'COMMON', cost:1, type:'attack', target:'single',
+  effects:[{type:'damage',value:8}],
+  up:{ effects:[{type:'damage',value:11}] } },
+
+{ id:'atk_hook', name:'フック', cat:'ATTACK', rarity:'COMMON', cost:1, type:'attack', target:'single',
+  effects:[{type:'damage',value:10}],
+  up:{ effects:[{type:'damage',value:14}] } },
+
+{ id:'atk_rush', name:'ラッシュ', cat:'ATTACK', rarity:'COMMON', cost:2, type:'attack', target:'single',
+  effects:[{type:'damageMulti',value:6,times:2}],
+  up:{ effects:[{type:'damageMulti',value:8,times:2}] } },
+
+{ id:'atk_uppercut', name:'アッパーカット', cat:'ATTACK', rarity:'UNCOMMON', cost:2, type:'attack', target:'single',
+  effects:[{type:'damage',value:12},{type:'status',key:'weak',value:1}],
+  up:{ effects:[{type:'damage',value:16},{type:'status',key:'weak',value:2}] } },
+
+{ id:'atk_barrage', name:'連続殴打', cat:'ATTACK', rarity:'UNCOMMON', cost:2, type:'attack', target:'single',
+  effects:[{type:'damageMulti',value:5,times:3}],
+  up:{ effects:[{type:'damageMulti',value:7,times:3}] } },
+
+{ id:'atk_heavy_blow', name:'ヘビーブロー', cat:'ATTACK', rarity:'UNCOMMON', cost:2, type:'attack', target:'single',
+  exhaust:true, effects:[{type:'damage',value:14}],
+  up:{ effects:[{type:'damage',value:18}] } },
+
+{ id:'atk_finish_blow', name:'フィニッシュブロー', cat:'ATTACK', rarity:'RARE', cost:3, type:'attack', target:'single',
+  effects:[{type:'damagePerAttackPlayed',base:8,per:4}],
+  up:{ effects:[{type:'damagePerAttackPlayed',base:12,per:6}] } },
+
+{ id:'atk_fist_dance', name:'拳打乱舞', cat:'ATTACK', rarity:'RARE', cost:1, type:'attack', target:'single',
+  effects:[{type:'damagePerAttackInHand',base:4,per:2}],
+  up:{ effects:[{type:'damagePerAttackInHand',base:6,per:3}] } },
+
+/* --- SKILL(ジャンプスクワット / 脚コア) --- */
+{ id:'skl_sidestep', name:'サイドステップ', cat:'SKILL', rarity:'BASIC', cost:0, type:'skill', target:'self',
+  effects:[{type:'evade',value:1}],
+  up:{ effects:[{type:'evade',value:2}] } },
+
+{ id:'skl_dash', name:'ダッシュ', cat:'SKILL', rarity:'BASIC', cost:1, type:'skill', target:'self',
+  effects:[{type:'draw',value:1}],
+  up:{ effects:[{type:'draw',value:2}] } },
+
+{ id:'skl_footwork', name:'フットワーク', cat:'SKILL', rarity:'COMMON', cost:1, type:'skill', target:'self',
+  exhaust:true, effects:[{type:'energy',value:1}],
+  up:{ exhaust:false, effects:[{type:'energy',value:1}] } },
+
+{ id:'skl_agility', name:'俊敏', cat:'SKILL', rarity:'COMMON', cost:1, type:'skill', target:'self',
+  effects:[{type:'draw',value:2}],
+  up:{ effects:[{type:'draw',value:3}] } },
+
+{ id:'skl_backstep', name:'バックステップ', cat:'SKILL', rarity:'COMMON', cost:1, type:'skill', target:'self',
+  effects:[{type:'block',value:8}],
+  up:{ effects:[{type:'block',value:11}] } },
+
+{ id:'skl_double_jump', name:'二段跳び', cat:'SKILL', rarity:'UNCOMMON', cost:1, type:'skill', target:'self',
+  effects:[{type:'energy',value:1},{type:'draw',value:1}],
+  up:{ effects:[{type:'energy',value:1},{type:'draw',value:2}] } },
+
+{ id:'skl_counter_stance', name:'カウンター体勢', cat:'SKILL', rarity:'UNCOMMON', cost:1, type:'skill', target:'self',
+  effects:[{type:'counter',value:5}],
+  up:{ effects:[{type:'counter',value:8}] } },
+
+{ id:'skl_sprint', name:'疾走', cat:'SKILL', rarity:'RARE', cost:0, type:'skill', target:'self',
+  exhaust:true, effects:[{type:'draw',value:2}],
+  up:{ exhaust:false, effects:[{type:'draw',value:2}] } },
+
+{ id:'skl_lightning', name:'電光石火', cat:'SKILL', rarity:'RARE', cost:1, type:'skill', target:'self',
+  exhaust:true, effects:[{type:'energy',value:2},{type:'draw',value:2}],
+  up:{ effects:[{type:'energy',value:3},{type:'draw',value:2}] } },
+
+/* --- DEBUFF(ツイストレッグレイズ / 捻転コア) --- */
+{ id:'dbf_feint', name:'フェイント', cat:'DEBUFF', rarity:'BASIC', cost:1, type:'skill', target:'single',
+  effects:[{type:'status',key:'weak',value:1}],
+  up:{ effects:[{type:'status',key:'weak',value:2}] } },
+
+{ id:'dbf_sharp_gaze', name:'鋭い視線', cat:'DEBUFF', rarity:'BASIC', cost:1, type:'skill', target:'single',
+  effects:[{type:'status',key:'vulnerable',value:1}],
+  up:{ effects:[{type:'status',key:'vulnerable',value:2}] } },
+
+{ id:'dbf_bleed_strike', name:'出血の一撃', cat:'DEBUFF', rarity:'COMMON', cost:1, type:'skill', target:'single',
+  effects:[{type:'damage',value:4},{type:'status',key:'bleed',value:2}],
+  up:{ effects:[{type:'damage',value:6},{type:'status',key:'bleed',value:3}] } },
+
+{ id:'dbf_weaken_form', name:'弱体化の型', cat:'DEBUFF', rarity:'COMMON', cost:1, type:'skill', target:'all',
+  effects:[{type:'status',key:'weak',value:1}],
+  up:{ effects:[{type:'status',key:'weak',value:2}] } },
+
+{ id:'dbf_taunt', name:'挑発', cat:'DEBUFF', rarity:'COMMON', cost:1, type:'skill', target:'all',
+  effects:[{type:'status',key:'vulnerable',value:1}],
+  up:{ effects:[{type:'status',key:'vulnerable',value:2}] } },
+
+{ id:'dbf_curse', name:'呪縛', cat:'DEBUFF', rarity:'UNCOMMON', cost:1, type:'skill', target:'single',
+  effects:[{type:'status',key:'weak',value:2},{type:'status',key:'vulnerable',value:1}],
+  up:{ effects:[{type:'status',key:'weak',value:2},{type:'status',key:'vulnerable',value:2}] } },
+
+{ id:'dbf_finishing_thrust', name:'トドメの一突き', cat:'DEBUFF', rarity:'UNCOMMON', cost:2, type:'skill', target:'single',
+  effects:[{type:'damage',value:8},{type:'status',key:'bleed',value:3},{type:'status',key:'vulnerable',value:1}],
+  up:{ effects:[{type:'damage',value:10},{type:'status',key:'bleed',value:4},{type:'status',key:'vulnerable',value:2}] } },
+
+{ id:'dbf_mass_break', name:'全体崩し', cat:'DEBUFF', rarity:'RARE', cost:2, type:'skill', target:'all',
+  effects:[{type:'status',key:'vulnerable',value:2},{type:'status',key:'weak',value:2}],
+  up:{ effects:[{type:'status',key:'vulnerable',value:3},{type:'status',key:'weak',value:3}] } },
+
+{ id:'dbf_erode', name:'蝕む一撃', cat:'DEBUFF', rarity:'RARE', cost:1, type:'skill', target:'single',
+  effects:[{type:'damage',value:2},{type:'status',key:'bleed',value:5}],
+  up:{ effects:[{type:'damage',value:2},{type:'status',key:'bleed',value:7}] } },
+
+/* --- POWER(プランク / 体幹コア) --- */
+{ id:'pwr_guard', name:'ガード', cat:'POWER', rarity:'BASIC', cost:1, type:'power', target:'self',
+  effects:[{type:'block',value:7}],
+  up:{ effects:[{type:'block',value:10}] } },
+
+{ id:'pwr_brace', name:'踏ん張り', cat:'POWER', rarity:'BASIC', cost:1, type:'power', target:'self',
+  effects:[{type:'block',value:5},{type:'blockPerTurn',value:2,turns:2}],
+  up:{ effects:[{type:'block',value:5},{type:'blockPerTurn',value:3,turns:3}] } },
+
+{ id:'pwr_iron_stance', name:'鉄壁の構え', cat:'POWER', rarity:'COMMON', cost:2, type:'power', target:'self',
+  effects:[{type:'block',value:12}],
+  up:{ effects:[{type:'block',value:16}] } },
+
+{ id:'pwr_repel', name:'反発', cat:'POWER', rarity:'COMMON', cost:1, type:'power', target:'self',
+  effects:[{type:'block',value:6},{type:'reflect'}],
+  up:{ effects:[{type:'block',value:9},{type:'reflect'}] } },
+
+{ id:'pwr_lasting_strength', name:'継続する強さ', cat:'POWER', rarity:'COMMON', cost:1, type:'power', target:'self',
+  keep:true, effects:[{type:'blockPerTurn',value:3,turns:0}],
+  up:{ effects:[{type:'blockPerTurn',value:4,turns:0}] } },
+
+{ id:'pwr_endurance', name:'忍耐', cat:'POWER', rarity:'UNCOMMON', cost:1, type:'power', target:'self',
+  keep:true, effects:[{type:'blockOnPower',value:2}],
+  up:{ effects:[{type:'blockOnPower',value:3}] } },
+
+{ id:'pwr_immovable', name:'不動の心', cat:'POWER', rarity:'UNCOMMON', cost:2, type:'power', target:'self',
+  keep:true, effects:[{type:'strength',value:2}],
+  up:{ effects:[{type:'strength',value:3}] } },
+
+{ id:'pwr_perfect_defense', name:'完全防御', cat:'POWER', rarity:'RARE', cost:2, type:'power', target:'self',
+  keep:true, effects:[{type:'blockBonus',value:2}],
+  up:{ effects:[{type:'blockBonus',value:3}] } },
+
+{ id:'pwr_diamond_stance', name:'金剛の構え', cat:'POWER', rarity:'RARE', cost:3, type:'power', target:'self',
+  effects:[{type:'block',value:20},{type:'keepBlock'}],
+  up:{ effects:[{type:'block',value:25},{type:'keepBlock'}] } }
+];
+
+const CARDS = {};
+for (const c of CARD_LIST){
+  c.exhaust = c.exhaust || false;
+  c.keep    = c.keep    || false;
+  CARDS[c.id] = c;
+}
+
+const CATEGORIES = ['ATTACK','SKILL','DEBUFF','POWER'];
+const CAT_LABEL  = { ATTACK:'攻', SKILL:'速', DEBUFF:'崩', POWER:'耐' };
+const CAT_NAME   = { ATTACK:'ATTACK', SKILL:'SKILL', DEBUFF:'DEBUFF', POWER:'POWER' };
+const RARITY_LABEL = { BASIC:'基本', COMMON:'C', UNCOMMON:'U', RARE:'R' };
+
+/* 種目 ↔ カテゴリ ↔ コア の対応 */
+const EXERCISES = [
+  { key:'pushup',        label:'腕立て伏せ',          unit:'回', cat:'ATTACK', core:'chest', coreLabel:'胸コア' },
+  { key:'jumpSquat',     label:'ジャンプスクワット',  unit:'回', cat:'SKILL',  core:'leg',   coreLabel:'脚コア' },
+  { key:'twistLegRaise', label:'ツイストレッグレイズ',unit:'回', cat:'DEBUFF', core:'twist', coreLabel:'捻転コア' },
+  { key:'plankSeconds',  label:'プランク',            unit:'秒', cat:'POWER',  core:'core',  coreLabel:'体幹コア' }
+];
+/** プランクの秒数→カウント換算(確定事項: 2秒 = 1カウント) */
+const PLANK_SECONDS_PER_COUNT = 2;
+
+/* --- 敵 ---
+ * intent: attack / block / buff / debuff / heal
+ * action には複数キーを併記できる(例: {intent:'attack', value:6, status:{weak:1}})
+ * フック: onEnter(enemy) / onTurnStart(enemy) / onAllyDeath(enemy)
+ */
+const ENEMY_LIST = [
+{ id:'slime_fake', name:'スライムモドキ', tier:'NORMAL', hpMin:18, hpMax:22,
+  phases:[{ hpThreshold:1.0, loop:true, pattern:[
+    { intent:'attack', value:6 },
+    { intent:'attack', value:6, status:{weak:1} }
+  ]}]},
+
+{ id:'spike_rat', name:'トゲネズミ', tier:'NORMAL', hpMin:12, hpMax:15,
+  phases:[{ hpThreshold:1.0, loop:true, pattern:[
+    { intent:'attack', value:4, times:2 }
+  ]}]},
+
+{ id:'wander_golem', name:'徘徊ゴーレム', tier:'NORMAL', hpMin:25, hpMax:30,
+  phases:[{ hpThreshold:1.0, loop:true, pattern:[
+    { intent:'attack', value:10 },
+    { intent:'block',  value:8 }
+  ]}]},
+
+{ id:'bat_swarm', name:'コウモリの群れ', tier:'NORMAL', hpMin:15, hpMax:18,
+  phases:[{ hpThreshold:1.0, loop:true, pattern:[
+    { intent:'attack', value:3, times:3 }
+  ]}]},
+
+{ id:'shadow_scout', name:'影の斥候', tier:'NORMAL', hpMin:20, hpMax:24,
+  phases:[{ hpThreshold:1.0, weighted:true, pattern:[
+    { v:{ intent:'attack', value:8 }, w:70 },
+    { v:{ intent:'heal',   value:5 }, w:30 }
+  ]}]},
+
+{ id:'elite_heavy_soldier', name:'重装兵', tier:'ELITE', hpMin:60, hpMax:60,
+  phases:[{ hpThreshold:1.0, loop:true, pattern:[
+    { intent:'attack', value:12 },
+    { intent:'block',  value:15, strength:2 }
+  ]}]},
+
+/* 双子の影は2体で1組。ENCOUNTERS 側で a/b を並べる(Phase 4) */
+{ id:'elite_twin_shadow_a', name:'双子の影(兄)', tier:'ELITE', hpMin:34, hpMax:34,
+  twin:true, startPatternIdx:0,
+  phases:[{ hpThreshold:1.0, loop:true, pattern:[
+    { intent:'attack', value:6 },
+    { intent:'debuff', status:{vulnerable:1} }
+  ]}],
+  onAllyDeath(e){ e.status.strength += 3; return e.name + 'が怒りに震えた! 力+3'; } },
+
+{ id:'elite_twin_shadow_b', name:'双子の影(弟)', tier:'ELITE', hpMin:34, hpMax:34,
+  twin:true, startPatternIdx:1,
+  phases:[{ hpThreshold:1.0, loop:true, pattern:[
+    { intent:'attack', value:6 },
+    { intent:'debuff', status:{vulnerable:1} }
+  ]}],
+  onAllyDeath(e){ e.status.strength += 3; return e.name + 'が怒りに震えた! 力+3'; } },
+
+{ id:'boss_overload_warden', name:'過負荷の番人', tier:'BOSS', hpMin:110, hpMax:110,
+  phases:[
+    { hpThreshold:1.0, loop:true, pattern:[
+      { intent:'debuff', status:{vulnerable:1} },
+      { intent:'attack', value:14 }
+    ]},
+    { hpThreshold:'bossPhase2', loop:true,
+      onEnter(e){ e.enraged = true; return '過負荷の番人が暴走した!'; },
+      pattern:[
+        { intent:'attack', value:18 },
+        { intent:'attack', value:18 },
+        { intent:'attack', value:18, heal:10 }
+      ]}
+  ]},
+
+{ id:'boss_sloth_colossus', name:'怠惰の巨像', tier:'BOSS', hpMin:120, hpMax:120,
+  onTurnStart(e){ e.status.strength += 1; return null; },
+  phases:[
+    { hpThreshold:1.0, loop:true, pattern:[ { intent:'attack', value:8 } ]},
+    { hpThreshold:'bossPhase2', loop:true,
+      onEnter(e){ e.status.strength += 3; e.enraged = true; return '怠惰の巨像が目を覚ました! 力+3'; },
+      pattern:[ { intent:'attack', value:8 } ]}
+  ]}
+];
+
+const ENEMIES = {};
+for (const e of ENEMY_LIST) ENEMIES[e.id] = e;
+
+/* --- レリック(効果の実装は Phase 7) --- */
+const RELIC_LIST = [
+{ id:'rel_training_proof', name:'鍛錬の証', icon:'🏅', desc:'戦闘開始時、力+1',
+  onBattleStart(ctx){ ctx.battle.status.strength += 1; return '力+1'; } },
+
+{ id:'rel_unyielding_plate', name:'不屈のプレート', icon:'🛡', desc:'戦闘開始時、ブロック+5',
+  onBattleStart(ctx){ return 'ブロック+' + gainBlock(5); } },
+
+{ id:'rel_accelerator', name:'加速装置', icon:'⚡', desc:'戦闘の最初のターンのみ Energy+1',
+  onTurnStart(ctx){ if (ctx.turn !== 1) return null; ctx.battle.energy += 1; return 'Energy+1'; } },
+
+{ id:'rel_grudge_record', name:'執念の記録', icon:'📕', desc:'出血によるダメージ+50%',
+  onBleedDamage(ctx){
+    const before = ctx.amount;
+    ctx.amount = Math.floor(ctx.amount * 1.5);
+    return ctx.amount > before ? '出血 ' + before + '→' + ctx.amount : null;
+  } },
+
+{ id:'rel_battle_wisdom', name:'継戦の心得', icon:'📜', desc:'POWERカードのコスト-1(最低0)',
+  onCardCost(ctx){
+    if (ctx.card.type !== 'power') return null;
+    ctx.cost = Math.max(0, ctx.cost - 1);
+    return null;   // コスト計算は描画のたびに走るのでログは出さない
+  } },
+
+{ id:'rel_sweat_crystal', name:'汗の結晶', icon:'💧', desc:'戦闘勝利時、ゴールド+10',
+  onBattleWin(ctx){ ctx.gold += 10; return 'ゴールド+10'; } },
+];
+const RELICS = {};
+for (const r of RELIC_LIST) RELICS[r.id] = r;
+
+/** 直近に発動したレリック(UIで光らせる用) */
+const relicFlash = {};
+
+/**
+ * 所持レリックのフックを順に呼ぶ。
+ * フックが文字列を返したらログに出し、アイコンを光らせる。
+ * ctx は書き換え可能(onCardCost の ctx.cost、onBleedDamage の ctx.amount など)。
+ */
+function fireRelicHook(hookName, ctx){
+  ctx = ctx || {};
+  if (!G.run) return ctx;
+  for (const id of G.run.relics){
+    const r = RELICS[id];
+    if (!r || !r[hookName]) continue;
+    const msg = r[hookName](ctx);
+    if (msg){
+      relicFlash[id] = Date.now();
+      if (G.battle) log('[' + r.name + '] ' + msg);
+    }
+  }
+  return ctx;
+}
+
+/* 初期から出現するレリック(残りは Phase 8 でアンロック) */
+const STARTER_RELICS = ['rel_training_proof','rel_unyielding_plate','rel_accelerator'];
+
+/* --- 難易度 --- */
+const DIFFICULTY = {
+  NORMAL: { key:'NORMAL', label:'ふつう', playerMaxHp:70,
+            enemyHpMult:1.0,  enemyDmgMult:1.0,
+            enemyStartStrength:{ NORMAL:0, ELITE:0, BOSS:0 },
+            shopPriceMult:1.0, restHealRate:0.30, bossPhase2:0.50,
+            goldMult:1.0, coreMult:1.0, rareWeightBonus:0 },
+  HARD:   { key:'HARD',   label:'むずい', playerMaxHp:65,
+            enemyHpMult:1.25, enemyDmgMult:1.15,
+            enemyStartStrength:{ NORMAL:1, ELITE:2, BOSS:2 },
+            shopPriceMult:1.25, restHealRate:0.22, bossPhase2:0.60,
+            goldMult:1.2, coreMult:1.2, rareWeightBonus:3 }
+};
+
+/* --- マップのノード出現重み(Phase 5) --- */
+const NODE_WEIGHTS = {
+  NORMAL: [{v:'COMBAT',w:45},{v:'EVENT',w:22},{v:'REST',w:12},
+           {v:'SHOP',w:8},{v:'ELITE',w:8},{v:'TREASURE',w:5}],
+  HARD:   [{v:'COMBAT',w:48},{v:'EVENT',w:20},{v:'REST',w:8},
+           {v:'SHOP',w:7},{v:'ELITE',w:13},{v:'TREASURE',w:4}]
+};
+
+/* --- エンカウント編成(Row が進むほど強くなる) --- */
+const ENCOUNTERS = {
+  COMBAT_EARLY: [
+    ['slime_fake','spike_rat'],
+    ['spike_rat','spike_rat','spike_rat'],
+    ['bat_swarm','spike_rat'],
+  ],
+  COMBAT_MID: [
+    ['slime_fake','slime_fake','spike_rat'],
+    ['wander_golem','spike_rat'],
+    ['shadow_scout','bat_swarm'],
+    ['bat_swarm','bat_swarm','spike_rat'],
+  ],
+  COMBAT_LATE: [
+    ['wander_golem','wander_golem'],
+    ['shadow_scout','shadow_scout','spike_rat'],
+    ['wander_golem','slime_fake','bat_swarm'],
+  ],
+  ELITE: [
+    ['elite_heavy_soldier'],
+    ['elite_twin_shadow_a','elite_twin_shadow_b'],
+  ],
+  BOSS: [
+    ['boss_overload_warden'],
+    ['boss_sloth_colossus'],
+  ],
+};
+
+/** 同じ編成が2回続かないように選ぶ */
+function pickEncounter(poolKey, lastKey){
+  const pool = ENCOUNTERS[poolKey];
+  const avail = pool.length > 1 ? pool.filter(g => g.join(',') !== lastKey) : pool;
+  return pick(avail).slice();
+}
+
+/* --- 初期デッキ --- */
+/**
+ * 初期デッキ。BASIC 8種すべてを含める。
+ * 生成・報酬・ショップは BASIC を対象外にしているため、
+ * ここに入っていない BASIC カードは一生入手できなくなる。
+ */
+const STARTING_DECK = [
+  'atk_punch','atk_punch','atk_punch','atk_double_punch',
+  'pwr_guard','pwr_guard','pwr_guard','pwr_brace',
+  'skl_sidestep','skl_dash',
+  'dbf_feint','dbf_sharp_gaze',
+];
+
+
+/* ===== SECTION: STATE ===== */
+const SAVE_KEY = 'mrog_save_v1';
+
+function newMeta(){
+  return {
+    cores: { chest:0, leg:0, twist:0, core:0 },
+    unlocked: [],
+    upgradedBasics: [],
+    unlockedRelics: [],
+    clearedNormal: false,
+    clearedHard: false,
+    lastPlayDate: null,
+    settings: { reduceMotion: false },
+  };
+}
+
+const G = {
+  screen: 'TITLE',
+  meta: newMeta(),
+  run: null,
+  battle: null,
+  draft: null,   // 難易度選択〜デッキ確認までの一時状態(セーブ対象外)
+};
+
+function saveGame(){
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ meta:G.meta, run:G.run }));
+  } catch (err) {
+    console.warn('セーブに失敗しました', err);
+  }
+}
+
+function loadGame(){
+  let raw = null;
+  try { raw = localStorage.getItem(SAVE_KEY); } catch (err) { return; }
+  if (!raw) return;
+  let data;
+  try { data = JSON.parse(raw); }
+  catch (err) {
+    console.info('セーブデータが壊れていたため破棄しました');
+    try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+    return;
+  }
+  if (!data || typeof data !== 'object') return;
+  G.meta = Object.assign(newMeta(), data.meta || {});
+  G.meta.cores = Object.assign({ chest:0, leg:0, twist:0, core:0 }, G.meta.cores || {});
+  G.meta.settings = Object.assign({ reduceMotion:false }, G.meta.settings || {});
+  G.run = data.run || null;
+}
+
+function resetSave(){
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+  G.meta = newMeta();
+  G.run = null;
+  G.battle = null;
+}
+
+/* カードインスタンス(uid で個体を識別する) */
+let _uid = 1;
+function newCardInstance(id, upgraded){
+  return { uid: _uid++, id: id, upgraded: !!upgraded };
+}
+/** upgraded を反映した実効カード定義を返す */
+function effectiveCard(inst){
+  const base = CARDS[inst.id];
+  if (!base) throw new Error('未知のカードID: ' + inst.id);
+  if (!inst.upgraded || !base.up) return base;
+  return Object.assign({}, base, base.up, { name: base.name + '+' });
+  // 注意: 非強化時は定義そのものを返すので、呼び出し側でプロパティを書き換えないこと
+}
+
+
+/* ===== SECTION: META(永続進行) ===== */
+const CAT_CORE = { ATTACK:'chest', SKILL:'leg', DEBUFF:'twist', POWER:'core' };
+const CORE_LABEL = { chest:'胸コア', leg:'脚コア', twist:'捻転コア', core:'体幹コア' };
+const UNLOCK_COST = { UNCOMMON:8, RARE:20 };
+const UPGRADE_BASIC_COST = 12;
+const RELIC_UNLOCK_COST = 15;
+
+/** 初期デッキに実際に入っている BASIC カード(強化差し替えの対象) */
+function upgradableBasics(){
+  const out = [];
+  for (const id of STARTING_DECK) if (out.indexOf(id) < 0) out.push(id);
+  return out;
+}
+
+function coreOf(cardId){ return CAT_CORE[CARDS[cardId].cat]; }
+function haveCore(key, n){ return (G.meta.cores[key] || 0) >= n; }
+function spendCore(key, n){ G.meta.cores[key] = (G.meta.cores[key] || 0) - n; }
+/** どのコアでも支払える購入用: 合計が足りるか */
+function totalCores(){
+  let t = 0;
+  for (const k in G.meta.cores) t += G.meta.cores[k];
+  return t;
+}
+/** 多いコアから順に n 個支払う */
+function spendAnyCore(n){
+  const keys = Object.keys(G.meta.cores).sort((a,b) => G.meta.cores[b] - G.meta.cores[a]);
+  let left = n;
+  for (const k of keys){
+    const take = Math.min(left, G.meta.cores[k]);
+    G.meta.cores[k] -= take;
+    left -= take;
+    if (left <= 0) break;
+  }
+}
+
+function unlockCard(id){
+  const c = CARDS[id];
+  const cost = UNLOCK_COST[c.rarity];
+  const key = coreOf(id);
+  if (!cost || !haveCore(key, cost) || G.meta.unlocked.indexOf(id) >= 0) return false;
+  spendCore(key, cost);
+  G.meta.unlocked.push(id);
+  saveGame();
+  return true;
+}
+function upgradeBasic(id){
+  if (G.meta.upgradedBasics.indexOf(id) >= 0) return false;
+  const key = coreOf(id);
+  if (!haveCore(key, UPGRADE_BASIC_COST)) return false;
+  spendCore(key, UPGRADE_BASIC_COST);
+  G.meta.upgradedBasics.push(id);
+  saveGame();
+  return true;
+}
+function unlockRelic(id){
+  if (STARTER_RELICS.indexOf(id) >= 0 || G.meta.unlockedRelics.indexOf(id) >= 0) return false;
+  if (totalCores() < RELIC_UNLOCK_COST) return false;
+  spendAnyCore(RELIC_UNLOCK_COST);
+  G.meta.unlockedRelics.push(id);
+  saveGame();
+  return true;
+}
+
+/** ラン終了時にコアを付与する(敗北時は50%没収) */
+function grantCores(cleared){
+  const result = endRun(cleared);
+  for (const r of result.rows) G.meta.cores[r.ex.core] = (G.meta.cores[r.ex.core] || 0) + r.got;
+  G.meta.lastPlayDate = new Date().toISOString().slice(0, 10);
+  saveGame();
+  return result;
+}
+
+function hardUnlocked(){ return !!G.meta.clearedNormal; }
+
+/* ===== SECTION: RUN (デッキ生成 / ラン開始) ===== */
+
+/** カード1種がアンロード済か。Phase 8 でメタ進行に接続する */
+function isUnlocked(cardId){
+  const c = CARDS[cardId];
+  if (!c) return false;
+  if (c.rarity === 'BASIC' || c.rarity === 'COMMON') return true;
+  return G.meta.unlocked.indexOf(cardId) >= 0;
+}
+
+/** プランクの秒数を他種目と同じ「回数」に正規化する */
+function toCount(exKey, rawValue){
+  const v = Math.max(0, Math.floor(rawValue || 0));
+  if (exKey === 'plankSeconds') return Math.floor(v / PLANK_SECONDS_PER_COUNT);
+  return v;
+}
+
+/** 入力値 → カテゴリごとの count */
+function normalizeExercise(input){
+  const out = {};
+  for (const ex of EXERCISES) out[ex.cat] = toCount(ex.key, input[ex.key]);
+  return out;
+}
+
+/** 回数 → 生成カード枚数(0〜4) */
+function cardsFromCount(count){
+  return Math.min(Math.floor(Math.sqrt(Math.max(0, count) / 5)), 4);
+}
+
+/** 回数 → 獲得筋力コア(0〜5、難易度倍率適用前) */
+function coresFromCount(count){
+  return Math.min(Math.floor(Math.max(0, count) / 10), 5);
+}
+
+/** 難易度倍率まで適用した獲得コア数 */
+function coresGained(count, diffKey){
+  return Math.floor(coresFromCount(count) * DIFFICULTY[diffKey].coreMult);
+}
+
+const RARITY_ORDER = ['RARE','UNCOMMON','COMMON'];
+
+/**
+ * レアリティ抽選(BASIC は対象外)。
+ * 回数が多いほど上位レアリティが出やすくなる。枚数だけ増やしても
+ * デッキが薄まって相殺されるため、「質」でも回数に報いる。
+ */
+function rarityBonus(count){
+  return Math.min(15, Math.floor(Math.max(0, count) / 40) * 5);   // 40回ごとに+5、上限+15
+}
+function rarityWeights(diffKey, count){
+  const b = DIFFICULTY[diffKey].rareWeightBonus;
+  const q = rarityBonus(count);
+  return [
+    { v:'COMMON',   w: 65 - b - q * 2 },
+    { v:'UNCOMMON', w: 25 + q },
+    { v:'RARE',     w: 10 + b + q },
+  ];
+}
+function rollRarity(diffKey, count){
+  return weightedPick(rarityWeights(diffKey, count || 0));
+}
+
+/**
+ * 運動量に応じた手札枚数。
+ * デッキが厚くなるほど1枚を引ける確率が下がるため、枚数を増やしただけでは
+ * 「運動するほど強い」が成立しない(希釈が質の向上を相殺してしまう)。
+ * 生成カード枚数に応じて手札を増やし、増えたデッキを実際に使えるようにする。
+ */
+const BASE_HAND_SIZE = 5;
+function handSizeFor(generatedCount){
+  if (generatedCount >= 14) return BASE_HAND_SIZE + 2;
+  if (generatedCount >= 8)  return BASE_HAND_SIZE + 1;
+  return BASE_HAND_SIZE;
+}
+
+/** 回数上限に近い種目は、生成カードが強化(+)版になる */
+function upgradeBonus(count){
+  if (count >= 160) return 2;
+  if (count >= 80)  return 1;
+  return 0;
+}
+
+/** 指定カテゴリ・レアリティから1枚選ぶ。候補が尽きたらレアリティを1段下げる */
+function rollCardOf(cat, rarity, deckSoFar, excludeIds){
+  const counts = {};
+  for (const inst of deckSoFar) counts[inst.id] = (counts[inst.id] || 0) + 1;
+  const exclude = excludeIds || [];
+
+  let idx = RARITY_ORDER.indexOf(rarity);
+  if (idx < 0) idx = RARITY_ORDER.indexOf('COMMON');
+
+  for (let i = idx; i < RARITY_ORDER.length; i++){
+    const r = RARITY_ORDER[i];
+    const all = CARD_LIST.filter(c => c.cat === cat && c.rarity === r && isUnlocked(c.id)
+                                      && exclude.indexOf(c.id) < 0);
+    if (!all.length) continue;
+    const fresh = all.filter(c => (counts[c.id] || 0) < 3);
+    const pool = fresh.length ? fresh : all;   // 全部3枚に達していたら制限を解除
+    return pick(pool).id;
+  }
+  return null;
+}
+
+/** 初期デッキ8枚 + 運動由来カード(最大16枚) */
+function buildDeck(exercise, meta, diffKey){
+  const deck = STARTING_DECK.map(id =>
+    newCardInstance(id, meta.upgradedBasics.includes(id)));
+
+  const counts = normalizeExercise(exercise);
+  for (const ex of EXERCISES){
+    const count = counts[ex.cat];
+    const n = cardsFromCount(count);
+    let upLeft = upgradeBonus(count);
+    for (let i = 0; i < n; i++){
+      const id = rollCardOf(ex.cat, rollRarity(diffKey, count), deck);
+      if (!id) continue;
+      const up = upLeft > 0 && !!CARDS[id].up;
+      if (up) upLeft--;
+      deck.push(newCardInstance(id, up));
+    }
+  }
+  return deck;
+}
+
+/** 下書き(難易度選択〜デッキ確認までの一時状態) */
+function newDraft(diffKey){
+  return {
+    difficulty: diffKey,
+    exercise: { pushup:0, jumpSquat:0, twistLegRaise:0, plankSeconds:0 },
+    deck: null
+  };
+}
+
+/** 下書きを確定して run を作る */
+function startRun(draft){
+  const d = DIFFICULTY[draft.difficulty];
+  G.run = {
+    difficulty: draft.difficulty,
+    hp: d.playerMaxHp, maxHp: d.playerMaxHp, gold: 99,
+    deck: draft.deck,
+    relics: [],
+    map: generateMap(draft.difficulty), currentRow: -1, currentCol: null, visited: [],
+    exercise: Object.assign({}, draft.exercise),
+    seenEvents: [], removeCost: 75,
+    kills: 0, pendingReward: null, tempEnergy: 0, coresGranted: false,
+    handSize: handSizeFor(draft.deck.length - STARTING_DECK.length),
+  };
+  G.draft = null;
+  saveGame();
+}
+
+
+/* ===== SECTION: NODES(報酬 / ショップ / 休憩 / イベント / 宝箱) ===== */
+
+const REWARD_RARITY = {
+  NORMAL: [{v:'COMMON',w:65},{v:'UNCOMMON',w:25},{v:'RARE',w:10}],
+  HARD:   [{v:'COMMON',w:62},{v:'UNCOMMON',w:25},{v:'RARE',w:13}],
+};
+const REWARD_GOLD = { COMBAT:[10,20], ELITE:[25,40], BOSS:[50,75] };
+const PRICE = { COMMON:[50,60], UNCOMMON:[75,95], RARE:[150,200], RELIC:[150,300] };
+/** 入手経路ごとに優先度が2倍になるレリック */
+const RELIC_FAVOR = {
+  ELITE:'rel_training_proof', BOSS:'rel_battle_wisdom', TREASURE:'rel_unyielding_plate',
+};
+
+/** 出現しうるレリック(Phase 8 でメタ進行に接続する) */
+function relicPool(){
+  return RELIC_LIST.map(r => r.id)
+    .filter(id => STARTER_RELICS.indexOf(id) >= 0 || G.meta.unlockedRelics.indexOf(id) >= 0);
+}
+function ownedRelics(){ return G.run ? G.run.relics : []; }
+function availableRelics(){
+  const owned = ownedRelics();
+  return relicPool().filter(id => owned.indexOf(id) < 0);
+}
+/** 未所持レリックを1つ。全て所持済なら null */
+function rollRelic(favorKey){
+  const pool = availableRelics();
+  if (!pool.length) return null;
+  const favor = RELIC_FAVOR[favorKey];
+  return weightedPick(pool.map(id => ({ v:id, w: id === favor ? 2 : 1 })));
+}
+function gainRelic(id){
+  if (!id || G.run.relics.indexOf(id) >= 0) return false;
+  G.run.relics.push(id);
+  relicFlash[id] = Date.now();
+  const r = RELICS[id];
+  if (typeof toast === 'function' && r) toast('レリック獲得<br><b>' + r.icon + ' ' + r.name + '</b>');
+  saveGame();
+  return true;
+}
+function gainGold(n){ G.run.gold += n; saveGame(); }
+function healPlayer(n){
+  G.run.hp = clamp(G.run.hp + n, 0, G.run.maxHp);
+  saveGame();
+}
+function addCardToDeck(id, upgraded){
+  G.run.deck.push(newCardInstance(id, !!upgraded));
+  saveGame();
+}
+function removeCardFromDeck(inst){
+  const i = G.run.deck.findIndex(c => c.uid === inst.uid);
+  if (i >= 0) G.run.deck.splice(i, 1);
+  saveGame();
+}
+/** 強化できるカード(未強化 かつ up を持つ) */
+function upgradableCards(){
+  return G.run.deck.filter(c => !c.upgraded && CARDS[c.id].up);
+}
+
+/* --- 戦闘報酬 --- */
+
+/** カード報酬: 4カテゴリから重複なしで選び、各カテゴリ1枚ずつ(全カテゴリ均等) */
+function pickRewardCards(diffKey, tier, count){
+  const n = Math.min(count || 3, CATEGORIES.length);
+  const cats = shuffle(CATEGORIES).slice(0, n);
+  const out = [];
+  for (const cat of cats){
+    let rarity = weightedPick(REWARD_RARITY[diffKey] || REWARD_RARITY.NORMAL);
+    // エリート/ボスの報酬は UNCOMMON 以上を保証する
+    if (tier !== 'COMBAT' && rarity === 'COMMON') rarity = 'UNCOMMON';
+    const id = rollCardOf(cat, rarity, [], out);
+    if (id) out.push(id);
+  }
+  return out;
+}
+
+function makeReward(tier){
+  const d = DIFFICULTY[G.run.difficulty];
+  const gr = REWARD_GOLD[tier] || REWARD_GOLD.COMBAT;
+  let gold = Math.floor(range(gr[0], gr[1]) * d.goldMult);
+  gold = fireRelicHookGold(gold);
+  return {
+    tier: tier,
+    gold: gold, goldTaken: false,
+    cards: pickRewardCards(G.run.difficulty, tier, d.rewardChoices || 3),
+    cardTaken: false,
+    relic: tier === 'COMBAT' ? null : rollRelic(tier),
+    relicTaken: false,
+  };
+}
+/** 難易度倍率の適用後にレリック分を加算する */
+function fireRelicHookGold(gold){
+  return fireRelicHook('onBattleWin', { gold: gold }).gold;
+}
+
+/* --- ショップ --- */
+function makeShopStock(){
+  const d = DIFFICULTY[G.run.difficulty];
+  const cards = [];
+  const plan = ['COMMON','COMMON','COMMON','UNCOMMON','RARE'];
+  const cats = shuffle(CATEGORIES);
+  plan.forEach((rarity, i) => {
+    const cat = cats[i % CATEGORIES.length];
+    const id = rollCardOf(cat, rarity, [], cards.map(c => c.id));
+    if (!id) return;
+    const pr = PRICE[CARDS[id].rarity] || PRICE.COMMON;
+    cards.push({ id: id, price: Math.floor(range(pr[0], pr[1]) * d.shopPriceMult), sold:false });
+  });
+  const relics = shuffle(availableRelics()).slice(0, range(2, 3)).map(id => ({
+    id: id, price: Math.floor(range(PRICE.RELIC[0], PRICE.RELIC[1]) * d.shopPriceMult), sold:false,
+  }));
+  return { cards: cards, relics: relics, removeUsed:false };
+}
+
+/* --- 宝箱 --- */
+function makeTreasure(){
+  const d = DIFFICULTY[G.run.difficulty];
+  return {
+    relic: rollRelic('TREASURE'),
+    gold: rnd(100) < 30 ? Math.floor(range(20, 40) * d.goldMult) : 0,
+    opened: false,
+  };
+}
+
+/* --- イベント --- */
+const EVENTS = [
+{ id:'ev_training_ground', title:'廃れた練習場',
+  text:'誰も使わなくなった練習場。器具は錆びているが、まだ使えなくはない。',
+  choices:[
+    { label:'黙々と鍛える', desc:'最大HP+5(現在HPも+5)',
+      run(){ G.run.maxHp += 5; G.run.hp += 5; saveGame();
+             return '体が一回り大きくなった気がする。最大HP+5'; } },
+    { label:'型を見直す', desc:'デッキから1枚をUpgrade',
+      enabled(){ return upgradableCards().length > 0; },
+      why(){ return '強化できるカードがない'; },
+      picker:{ title:'強化するカードを選ぶ', list(){ return upgradableCards(); },
+               done(inst){ inst.upgraded = true; saveGame();
+                           return effectiveCard(inst).name + ' に磨きがかかった'; } } },
+    { label:'立ち去る', desc:'何も起こらない', run(){ return '何もせずに立ち去った。'; } },
+  ]},
+
+{ id:'ev_iron_offering', title:'鉄の供物',
+  text:'台座に鉄塊が供えられている。「痛みと引き換えに」と刻まれていた。',
+  choices:[
+    { label:'血を捧げる', desc:'HP-10 / レリックを1つ獲得',
+      enabled(){ return G.run.hp > 10; },
+      why(){ return 'HPが足りない'; },
+      run(){ G.run.hp -= 10;
+             const id = rollRelic(null);
+             if (id){ gainRelic(id); return 'HPを10失い、' + RELICS[id].name + ' を手に入れた。'; }
+             gainGold(50);
+             return 'HPを10失ったが、レリックは尽きていた。代わりにゴールド+50'; } },
+    { label:'立ち去る', desc:'何も起こらない', run(){ return '嫌な予感がして引き返した。'; } },
+  ]},
+
+{ id:'ev_dusty_shelf', title:'埃まみれの棚',
+  text:'崩れかけた棚。奥に何かが押し込まれている。',
+  choices:[
+    { label:'金目のものを探す', desc:'ゴールド 30〜60 を獲得',
+      run(){ const g = range(30, 60); gainGold(g); return 'ゴールドを' + g + '手に入れた。'; } },
+    { label:'奥まで手を伸ばす', desc:'HP-8 / RARE カードを1枚獲得',
+      run(){ G.run.hp = Math.max(1, G.run.hp - 8);
+             const cat = pick(CATEGORIES);
+             const id = rollCardOf(cat, 'RARE', G.run.deck, []);
+             if (id){ addCardToDeck(id, false);
+                      return '腕を切ったが、' + CARDS[id].name + ' を手に入れた。'; }
+             return '腕を切っただけだった。'; } },
+  ]},
+
+{ id:'ev_purge_altar', title:'削ぎ落としの祭壇',
+  text:'「捨てられぬ者は強くなれぬ」。祭壇はそう告げている。',
+  choices:[
+    { label:'1枚を捨てる', desc:'デッキから1枚を無料で除去',
+      enabled(){ return G.run.deck.length > 1; },
+      why(){ return 'デッキが1枚しかない'; },
+      picker:{ title:'除去するカードを選ぶ', list(){ return G.run.deck.slice(); },
+               done(inst){ const nm = effectiveCard(inst).name; removeCardFromDeck(inst);
+                           return nm + ' を手放した。'; } } },
+    { label:'捧げ物をする', desc:'最大HP+8(現在HPも+8)',
+      run(){ G.run.maxHp += 8; G.run.hp += 8; saveGame(); return '最大HP+8'; } },
+  ]},
+
+{ id:'ev_grudge_shrine', title:'執念の祠',
+  text:'古い祠。捻じれた体の像が置かれている。',
+  choices:[
+    { label:'像に手を合わせる', desc:'執念の記録 を獲得(DEBUFFカードが5枚以上必要)',
+      enabled(){ return countCat('DEBUFF') >= 5 && ownedRelics().indexOf('rel_grudge_record') < 0; },
+      why(){ return ownedRelics().indexOf('rel_grudge_record') >= 0 ? '既に持っている'
+                 : 'デッキのDEBUFFカードが' + countCat('DEBUFF') + '枚(5枚必要)'; },
+      run(){ gainRelic('rel_grudge_record'); return '執念の記録 を手に入れた。'; } },
+    { label:'休んでいく', desc:'HPを20回復',
+      run(){ healPlayer(20); return 'HPを20回復した。'; } },
+  ]},
+
+{ id:'ev_overwork', title:'オーバーワーク',
+  text:'まだやれる。まだやれる。……本当に?',
+  choices:[
+    { label:'追い込む', desc:'HP-5 / 次の戦闘のみ Energy+1',
+      enabled(){ return G.run.hp > 5; },
+      why(){ return 'HPが足りない'; },
+      run(){ G.run.hp -= 5; G.run.tempEnergy = 1; saveGame();
+             return '次の戦闘だけ Energy が1多くなる。'; } },
+    { label:'今日はここまで', desc:'何も起こらない', run(){ return '賢明な判断だ。'; } },
+  ]},
+];
+
+function countCat(cat){
+  return G.run.deck.filter(c => CARDS[c.id].cat === cat).length;
+}
+
+/** 同じランで同じイベントは2回出さない */
+function pickEvent(){
+  const seen = G.run.seenEvents || [];
+  const pool = EVENTS.filter(e => seen.indexOf(e.id) < 0);
+  return (pool.length ? pick(pool) : pick(EVENTS)).id;
+}
+
+/* --- ラン終了 --- */
+function endRun(cleared){
+  const counts = normalizeExercise(G.run.exercise);
+  const d = DIFFICULTY[G.run.difficulty];
+  const rows = EXERCISES.map(ex => {
+    const full = Math.floor(coresFromCount(counts[ex.cat]) * d.coreMult);
+    const got  = cleared ? full : Math.ceil(full * 0.5);   // 敗北時は50%没収(端数切り上げ)
+    return { ex: ex, count: counts[ex.cat], full: full, got: got };
+  });
+  return { cleared: cleared, rows: rows };
+}
+
+/* ===== SECTION: MAP ===== */
+const MAP_ROWS = 7;
+const MAP_COLS = 4;
+const BOSS_ROW = MAP_ROWS - 1;
+const NODE_ICON = {
+  COMBAT:'⚔', ELITE:'👹', EVENT:'❓', REST:'🔥', SHOP:'🏪', TREASURE:'🎁', BOSS:'💀',
+};
+const NODE_LABEL = {
+  COMBAT:'戦闘', ELITE:'エリート', EVENT:'イベント', REST:'休憩',
+  SHOP:'ショップ', TREASURE:'宝箱', BOSS:'ボス',
+};
+
+function nodeKey(r, c){ return r + '_' + c; }
+
+/** 7行×最大4列の分岐マップを生成する */
+function generateMap(diffKey){
+  for (let attempt = 0; attempt < 40; attempt++){
+    const map = buildMapGraph();
+    assignNodeTypes(map, diffKey);
+    ensureConstraints(map);
+    assignEnemyGroups(map);
+    if (validateMap(map)) return map;
+  }
+  // ここに来ることは実質ないが、最後の1回は制約補正済みのものを返す
+  const map = buildMapGraph();
+  assignNodeTypes(map, diffKey);
+  ensureConstraints(map);
+  assignEnemyGroups(map);
+  return map;
+}
+
+/** パスを6本引いてノードと辺を確定する */
+function buildMapGraph(){
+  const rows = [];
+  for (let r = 0; r < MAP_ROWS; r++) rows.push(new Array(MAP_COLS).fill(null));
+
+  const ensure = (r, c) => {
+    if (!rows[r][c]) rows[r][c] = { row:r, col:c, type:null, next:[], prev:[], enemyGroup:null };
+    return rows[r][c];
+  };
+  const link = (a, b) => {
+    if (a.next.indexOf(b.col) < 0) a.next.push(b.col);
+    if (b.prev.indexOf(a.col) < 0) b.prev.push(a.col);
+  };
+
+  // Row0 のスタート地点は2〜3箇所
+  const startCols = shuffle([0,1,2,3]).slice(0, range(2,3)).sort((x,y) => x-y);
+  for (const c of startCols) ensure(0, c);
+
+  // Row0 → Row5 まで6本のパスを引く
+  for (let i = 0; i < 6; i++){
+    let c = startCols[i % startCols.length];
+    for (let r = 0; r < BOSS_ROW - 1; r++){
+      const from = ensure(r, c);
+      const cands = [c - 1, c, c + 1].filter(x => x >= 0 && x < MAP_COLS);
+      const nc = pick(cands);
+      link(from, ensure(r + 1, nc));
+      c = nc;
+    }
+  }
+
+  // Row5 の全ノードを Row6 のボスへ収束させる
+  const boss = ensure(BOSS_ROW, 0);
+  boss.type = 'BOSS';
+  for (let c = 0; c < MAP_COLS; c++){
+    if (rows[BOSS_ROW - 1][c]) link(rows[BOSS_ROW - 1][c], boss);
+  }
+  return { rows: rows };
+}
+
+function mapNodes(map, fromRow, toRow){
+  const out = [];
+  for (let r = fromRow; r <= toRow; r++)
+    for (let c = 0; c < MAP_COLS; c++) if (map.rows[r][c]) out.push(map.rows[r][c]);
+  return out;
+}
+function parentsOf(map, node){
+  if (node.row === 0) return [];
+  return node.prev.map(c => map.rows[node.row - 1][c]).filter(Boolean);
+}
+
+function assignNodeTypes(map, diffKey){
+  for (let c = 0; c < MAP_COLS; c++) if (map.rows[0][c]) map.rows[0][c].type = 'COMBAT';
+  const weights = NODE_WEIGHTS[diffKey] || NODE_WEIGHTS.NORMAL;
+  for (const n of mapNodes(map, 1, BOSS_ROW - 1)) n.type = weightedPick(weights);
+}
+
+/** 生成後の制約補正 */
+function ensureConstraints(map){
+  const last = BOSS_ROW - 1;   // = Row5
+
+  // Row1 は ELITE / REST 禁止
+  for (const n of mapNodes(map, 1, 1))
+    if (n.type === 'ELITE' || n.type === 'REST') n.type = 'COMBAT';
+
+  // ELITE はラン中1〜2個
+  let elites = mapNodes(map, 2, last).filter(n => n.type === 'ELITE');
+  if (elites.length === 0){
+    const cands = mapNodes(map, 3, 4).filter(n => n.type === 'COMBAT');
+    const pool = cands.length ? cands : mapNodes(map, 2, last);
+    if (pool.length) pick(pool).type = 'ELITE';
+  } else if (elites.length > 2){
+    for (const n of shuffle(elites).slice(2)) n.type = 'COMBAT';
+  }
+
+  // SHOP はラン中1個以上
+  if (!mapNodes(map, 1, last).some(n => n.type === 'SHOP')){
+    const pool = mapNodes(map, 3, 3).filter(n => n.type !== 'ELITE');
+    const alt  = mapNodes(map, 2, last).filter(n => n.type !== 'ELITE');
+    const target = pool.length ? pool : alt;
+    if (target.length) pick(target).type = 'SHOP';
+  }
+
+  // REST は連続禁止(親が REST なら EVENT に置換)
+  for (let r = 2; r <= last; r++)
+    for (const n of mapNodes(map, r, r))
+      if (n.type === 'REST' && parentsOf(map, n).some(p => p.type === 'REST')) n.type = 'EVENT';
+
+  // EVENT は連続2回まで(3連続になる経路の3つ目を COMBAT に)
+  for (let r = 3; r <= last; r++){
+    for (const n of mapNodes(map, r, r)){
+      if (n.type !== 'EVENT') continue;
+      const three = parentsOf(map, n).some(p =>
+        p.type === 'EVENT' && parentsOf(map, p).some(g => g.type === 'EVENT'));
+      if (three) n.type = 'COMBAT';
+    }
+  }
+
+  // ボス直前(Row5)に REST を最低1つ保証
+  if (!mapNodes(map, last, last).some(n => n.type === 'REST')){
+    const all = mapNodes(map, last, last);
+    // できるだけ親が REST でないノードを選ぶ(連続禁止を壊さないため)
+    const safe = all.filter(n => !parentsOf(map, n).some(p => p.type === 'REST'));
+    const target = safe.length ? safe : all;
+    if (target.length) pick(target).type = 'REST';
+  }
+}
+
+/** 戦闘ノードの敵編成を生成時に確定させる(リロードで変わらないように) */
+function assignEnemyGroups(map){
+  let lastKey = null;
+  const assign = (n, poolKey) => {
+    const g = pickEncounter(poolKey, lastKey);
+    lastKey = g.join(',');
+    n.enemyGroup = g;
+  };
+  for (let r = 0; r <= BOSS_ROW; r++){
+    for (const n of mapNodes(map, r, r)){
+      if (n.type === 'COMBAT'){
+        assign(n, r <= 2 ? 'COMBAT_EARLY' : (r <= 4 ? 'COMBAT_MID' : 'COMBAT_LATE'));
+      } else if (n.type === 'ELITE'){
+        assign(n, 'ELITE');
+      } else if (n.type === 'BOSS'){
+        assign(n, 'BOSS');
+      }
+    }
+  }
+}
+
+/** 制約を満たしているか(テストとリトライ判定に使う) */
+function validateMap(map){
+  const last = BOSS_ROW - 1;
+  const errs = mapProblems(map);
+  return errs.length === 0;
+}
+
+function mapProblems(map){
+  const last = BOSS_ROW - 1;
+  const errs = [];
+  // Row0 → Row6 の経路が存在するか
+  let reach = new Set();
+  for (let c = 0; c < MAP_COLS; c++) if (map.rows[0][c]) reach.add(c);
+  if (!reach.size) errs.push('Row0にノードがない');
+  for (let r = 0; r < BOSS_ROW; r++){
+    const nx = new Set();
+    for (const c of reach) if (map.rows[r][c]) for (const n of map.rows[r][c].next) nx.add(n);
+    reach = nx;
+    if (!reach.size){ errs.push('Row' + (r + 1) + 'へ到達できない'); break; }
+  }
+  // 孤立ノード
+  for (const n of mapNodes(map, 1, BOSS_ROW))
+    if (!n.prev.length) errs.push('孤立ノード ' + nodeKey(n.row, n.col));
+  for (const n of mapNodes(map, 0, BOSS_ROW - 1))
+    if (!n.next.length) errs.push('行き止まり ' + nodeKey(n.row, n.col));
+
+  const nodes = mapNodes(map, 1, last);
+  const cnt = t => nodes.filter(n => n.type === t).length;
+  if (cnt('ELITE') < 1 || cnt('ELITE') > 2) errs.push('ELITE数 ' + cnt('ELITE'));
+  if (cnt('SHOP') < 1) errs.push('SHOPがない');
+  if (!mapNodes(map, last, last).some(n => n.type === 'REST')) errs.push('Row5にRESTがない');
+  for (const n of mapNodes(map, 1, 1))
+    if (n.type === 'ELITE' || n.type === 'REST') errs.push('Row1に' + n.type);
+  for (const n of nodes)
+    if (n.type === 'REST' && parentsOf(map, n).some(p => p.type === 'REST')) errs.push('RESTが連続');
+  for (const n of nodes){
+    if (n.type !== 'EVENT') continue;
+    if (parentsOf(map, n).some(p => p.type === 'EVENT'
+        && parentsOf(map, p).some(g => g.type === 'EVENT'))) errs.push('EVENTが3連続');
+  }
+  for (const n of mapNodes(map, 0, BOSS_ROW))
+    if ((n.type === 'COMBAT' || n.type === 'ELITE' || n.type === 'BOSS') && !n.enemyGroup)
+      errs.push('敵編成なし ' + nodeKey(n.row, n.col));
+  return errs;
+}
+
+/* --- 進行 --- */
+
+/** 現在地から選べるノードの一覧 */
+function selectableNodes(){
+  const run = G.run;
+  if (!run || !run.map) return [];
+  if (run.currentRow < 0) return mapNodes(run.map, 0, 0);
+  if (run.currentRow >= BOSS_ROW) return [];
+  const cur = run.map.rows[run.currentRow][run.currentCol];
+  if (!cur) return [];
+  return cur.next.map(c => run.map.rows[run.currentRow + 1][c]).filter(Boolean);
+}
+
+function enterNode(node){
+  const run = G.run;
+  run.currentRow = node.row;
+  run.currentCol = node.col;
+  if (run.visited.indexOf(nodeKey(node.row, node.col)) < 0)
+    run.visited.push(nodeKey(node.row, node.col));
+  saveGame();
+  if (node.type === 'COMBAT' || node.type === 'ELITE' || node.type === 'BOSS'){
+    startBattle(node.enemyGroup);
+  } else {
+    go(node.type);
+  }
+}
+
+function currentNode(){
+  const run = G.run;
+  if (!run || !run.map || run.currentRow < 0) return null;
+  return run.map.rows[run.currentRow][run.currentCol] || null;
+}
+
+/* ===== SECTION: BATTLE ===== */
+const MAX_HAND = 12;
+const STATUS_ICON = { weak:'🌀', vulnerable:'💥', bleed:'🩸', strength:'💪' };
+const STATUS_NAME = { weak:'弱体', vulnerable:'脆弱', bleed:'出血', strength:'力' };
+const INTENT_ICON = { attack:'⚔', block:'🛡', buff:'⬆', debuff:'⬇', heal:'✚' };
+
+let B = null;   // G.battle のショートカット
+
+function newStatus(){ return { weak:0, vulnerable:0, bleed:0, strength:0 }; }
+
+function makeEnemy(id, idx){
+  const def = ENEMIES[id];
+  if (!def) throw new Error('未知の敵ID: ' + id);
+  const d = DIFFICULTY[G.run.difficulty];
+  const hp = Math.round(range(def.hpMin, def.hpMax) * d.enemyHpMult);
+  return {
+    uid: 'e' + idx, id: id, name: def.name, tier: def.tier,
+    hp: hp, maxHp: hp, block: 0,
+    status: Object.assign(newStatus(), { strength: d.enemyStartStrength[def.tier] || 0 }),
+    phaseIdx: 0, patternIdx: def.startPatternIdx || 0,
+    intent: null, turnCount: 0, alive: true
+  };
+}
+
+const DEATH_ANIM_MS = 340;
+
+function motionOn(){ return !(G.meta.settings && G.meta.settings.reduceMotion); }
+
+/** ダメージ表示の予約。renderBattle 後に実座標へ配置する */
+function popup(key, text, kind){
+  if (!B || !motionOn()) return;
+  B.pops.push({ key: key, text: text, kind: kind || 'dmg' });
+}
+
+/** 予約されたポップアップを実際の要素の上に出す */
+function flushPopups(){
+  if (!B || !B.pops || !B.pops.length) return;
+  const pops = B.pops.splice(0, B.pops.length);
+  let i = 0;
+  for (const pp of pops){
+    const host = document.querySelector('[data-pop="' + pp.key + '"]');
+    if (!host) continue;
+    const r = host.getBoundingClientRect();
+    const n = el('div', 'mr-pop ' + pp.kind, pp.text);
+    n.style.left = (r.left + r.width / 2) + 'px';
+    n.style.top  = (r.top + r.height / 3 + (i % 3) * 16) + 'px';
+    document.body.appendChild(n);
+    setTimeout(() => { if (n.parentNode) n.parentNode.removeChild(n); }, 900);
+    i++;
+  }
+}
+
+let _shakeTimer = null;
+function shake(){
+  if (!motionOn()) return;
+  const app = document.getElementById('app');
+  if (!app) return;
+  app.classList.add('shaking');
+  if (_shakeTimer) clearTimeout(_shakeTimer);
+  _shakeTimer = setTimeout(() => app.classList.remove('shaking'), 140);
+}
+let _renderTimer = null;
+/** 死亡アニメの終了後などに、まとめて再描画する */
+function scheduleRender(delay){
+  if (_renderTimer) clearTimeout(_renderTimer);
+  _renderTimer = setTimeout(() => { _renderTimer = null; if (G.battle) render(); }, delay);
+}
+
+function log(msg){
+  if (!msg) return;
+  B.log.push(msg);
+  if (B.log.length > 60) B.log.shift();
+}
+
+function startBattle(enemyIds){
+  B = G.battle = {
+    enemyIds: enemyIds.slice(),
+    enemies: enemyIds.map((id, i) => makeEnemy(id, i)),
+    drawPile: [], hand: [], discardPile: [], exhaustPile: [], powers: [],
+    energy: 3, maxEnergy: 3,
+    block: 0, status: newStatus(),
+    evade: 0, counter: 0, keepBlock: false, reflectPending: 0,
+    blockPerTurn: [],
+    attacksPlayedThisTurn: 0,
+    turn: 0, phase: 'PLAYER',
+    selecting: null,
+    pops: [],
+    log: [],
+  };
+  B.drawPile = shuffle(G.run.deck.map(c => ({ uid:c.uid, id:c.id, upgraded:c.upgraded })));
+  if (G.run.tempEnergy){
+    B.maxEnergy += G.run.tempEnergy;
+    log('[オーバーワーク] このバトルは Energy+' + G.run.tempEnergy);
+    G.run.tempEnergy = 0;
+  }
+  log('戦闘開始: ' + B.enemies.map(e => e.name).join(' / '));
+  startPlayerTurn();
+  // ターン開始処理(ブロックのリセット)の後に発動させる。
+  // 先に呼ぶと「戦闘開始時ブロック+5」がリセットで消えてしまう
+  fireRelicHook('onBattleStart', { battle: B });
+  go('BATTLE');
+}
+
+function startPlayerTurn(){
+  B.turn++;
+  B.phase = 'PLAYER';
+  B.selecting = null;
+  B.energy = B.maxEnergy;
+  if (!B.keepBlock) B.block = 0;
+  // 回避 / 反撃は直前の敵ターンを守るためのもの。持ち越さない
+  B.evade = 0;
+  B.counter = 0;
+
+  // ターン開始時のブロック(踏ん張り / 継続する強さ)
+  for (let i = B.blockPerTurn.length - 1; i >= 0; i--){
+    const bp = B.blockPerTurn[i];
+    gainBlock(bp.value);
+    log('ターン開始: ブロック+' + bp.value);
+    if (bp.turnsLeft !== Infinity){
+      bp.turnsLeft--;
+      if (bp.turnsLeft <= 0) B.blockPerTurn.splice(i, 1);
+    }
+  }
+
+  if (B.status.weak > 0) B.status.weak--;
+  if (B.status.vulnerable > 0) B.status.vulnerable--;
+  B.attacksPlayedThisTurn = 0;
+
+  drawCard(Math.max(0, handSize() - B.hand.length));
+  // 敵の意図を決める。ターン経過で強化される敵(怠惰の巨像)はここで先に加算し、
+  // 表示される Intent と実際の被ダメージが必ず一致するようにする
+  for (const e of B.enemies){
+    if (!e.alive) continue;
+    const def = ENEMIES[e.id];
+    if (def.onTurnStart) log(def.onTurnStart(e));
+    syncPhase(e);
+    e.intent = decideIntent(e);
+  }
+  fireRelicHook('onTurnStart', { battle: B, turn: B.turn });
+}
+
+function handSize(){ return (G.run && G.run.handSize) || BASE_HAND_SIZE; }
+
+function drawCard(n){
+  for (let i = 0; i < n; i++){
+    if (B.hand.length >= MAX_HAND){ log('手札が上限(' + MAX_HAND + '枚)のため引けない'); return; }
+    if (!B.drawPile.length){
+      if (!B.discardPile.length) { log('山札が尽きた'); return; }
+      B.drawPile = shuffle(B.discardPile);
+      B.discardPile = [];
+      log('捨て札をシャッフルして山札に戻した');
+    }
+    B.hand.push(B.drawPile.pop());
+  }
+}
+
+/* --- ダメージ計算 --- */
+function calcDamage(base, attacker, defender, opts){
+  opts = opts || {};
+  const useStr  = opts.strength   !== false;
+  const useWeak = opts.weak       !== false;
+  const useVuln = opts.vulnerable !== false;
+  let v = base + (useStr ? (attacker.status.strength || 0) : 0);
+  if (v < 0) v = 0;
+  if (useVuln && defender.status.vulnerable > 0) v *= 1.5;
+  if (useWeak && attacker.status.weak > 0) v *= 0.75;
+  return Math.floor(v);
+}
+
+function playerActor(){ return { isPlayer:true, status: B.status }; }
+
+function gainBlock(v){
+  let amount = v;
+  for (const p of B.powers){
+    for (const e of effectiveCard(p).effects) if (e.type === 'blockBonus') amount += e.value;
+  }
+  if (amount < 0) amount = 0;
+  amount = Math.max(0, fireRelicHook('onGainBlock', { amount: amount }).amount);
+  B.block += amount;
+  if (amount > 0) popup('player', '🛡+' + amount, 'blk');
+  return amount;
+}
+
+function dealDamageToEnemy(enemy, amount, opts){
+  if (!enemy.alive || amount <= 0) return 0;
+  opts = opts || {};
+  let dealt = amount;
+  if (!opts.ignoreBlock){
+    const absorbed = Math.min(enemy.block, dealt);
+    enemy.block -= absorbed;
+    dealt -= absorbed;
+  }
+  enemy.hp -= dealt;
+  if (amount > 0) popup(enemy.uid, '-' + amount, 'dmg');
+  if (enemy.hp <= 0){
+    enemy.hp = 0;
+    enemy.alive = false;
+    enemy.diedAt = Date.now();
+    G.run.kills = (G.run.kills || 0) + 1;
+    log(enemy.name + 'を倒した!');
+    onEnemyDeath(enemy);
+    scheduleRender(DEATH_ANIM_MS + 60);
+  } else {
+    syncPhase(enemy);
+  }
+  return dealt;
+}
+
+function onEnemyDeath(dead){
+  for (const e of B.enemies){
+    if (e === dead || !e.alive) continue;
+    const def = ENEMIES[e.id];
+    if (def.onAllyDeath) log(def.onAllyDeath(e));
+  }
+}
+
+/** 敵からプレイヤーへの攻撃1ヒット分 */
+function dealDamageToPlayer(amount, source){
+  if (B.evade > 0){
+    B.evade--;
+    popup('player', '回避', 'blk');
+    log('回避! 攻撃を無効化した(残り' + B.evade + ')');
+    triggerCounter(source);
+    return 0;
+  }
+  const absorbed = Math.min(B.block, amount);
+  B.block -= absorbed;
+  const through = amount - absorbed;
+  G.run.hp -= through;
+  if (G.run.hp < 0) G.run.hp = 0;
+  if (absorbed > 0) popup('player', '🛡-' + absorbed, 'blk');
+  if (through > 0){ popup('player', '-' + through, 'hurt'); shake(); }
+  log('プレイヤーに' + amount + 'ダメージ'
+      + (absorbed ? '(ブロックで' + absorbed + '軽減)' : '')
+      + ' → HP ' + G.run.hp);
+  triggerCounter(source);
+  return through;
+}
+
+function triggerCounter(source){
+  if (B.counter <= 0 || !source || !source.alive) return;
+  const dmg = B.counter;
+  B.counter = 0;
+  log('カウンター! ' + source.name + 'に' + dmg + 'ダメージ');
+  dealDamageToEnemy(source, dmg);
+}
+
+/* --- カード使用 --- */
+function cardCost(card){
+  const ctx = fireRelicHook('onCardCost', { card: card, cost: card.cost });
+  return Math.max(0, ctx.cost);
+}
+
+function livingEnemies(){ return B.enemies.filter(e => e.alive); }
+
+function canPlay(inst){
+  if (B.phase !== 'PLAYER') return false;
+  return cardCost(effectiveCard(inst)) <= B.energy;
+}
+
+/** handIndex のカードを使う。targetIdx は B.enemies のインデックス */
+function playCard(handIndex, targetIdx){
+  if (B.phase !== 'PLAYER') return;
+  const inst = B.hand[handIndex];
+  if (!inst) return;
+  const card = effectiveCard(inst);
+  const cost = cardCost(card);
+  if (cost > B.energy){ log('Energyが足りない'); return; }
+
+  const alive = livingEnemies();
+  if (!alive.length) return;
+  let target = null;
+  if (card.target === 'single'){
+    target = B.enemies[targetIdx];
+    if (!target || !target.alive) target = alive[0];
+  }
+
+  B.energy -= cost;
+  B.hand.splice(handIndex, 1);
+  B.selecting = null;
+  log('▶ ' + card.name + (card.target === 'single' && alive.length > 1 ? ' → ' + target.name : ''));
+
+  const ctx = { card: card, inst: inst, target: target };
+  for (const e of card.effects) resolveEffect(e, ctx);
+
+  if (card.type === 'attack') B.attacksPlayedThisTurn++;
+  if (card.type === 'power' ) firePowerUsed(card);
+
+  if (card.keep)          B.powers.push(inst);
+  else if (card.exhaust)  B.exhaustPile.push(inst);
+  else                    B.discardPile.push(inst);
+
+  checkBattleEnd();
+  if (B.phase === 'PLAYER') render();
+}
+
+/** 忍耐【Power】: POWERカードを使うたびブロック */
+function firePowerUsed(justPlayed){
+  for (const p of B.powers){
+    for (const e of effectiveCard(p).effects){
+      if (e.type === 'blockOnPower'){
+        const got = gainBlock(e.value);
+        log('[忍耐] ブロック+' + got);
+      }
+    }
+  }
+}
+
+/* --- 効果解決 --- */
+function resolveEffect(e, ctx){
+  const card = ctx.card;
+  const me = playerActor();
+  const targets = card.target === 'all' ? livingEnemies()
+                : ctx.target ? [ctx.target] : [];
+
+  switch (e.type){
+    case 'damage': {
+      for (const t of targets){
+        const dmg = calcDamage(e.value, me, t, { strength: card.type === 'attack' });
+        dealDamageToEnemy(t, dmg);
+        log(t.name + 'に' + dmg + 'ダメージ (残HP ' + t.hp + ')');
+      }
+      break;
+    }
+    case 'damageMulti': {
+      for (let i = 0; i < e.times; i++){
+        for (const t of targets){
+          if (!t.alive) continue;
+          const dmg = calcDamage(e.value, me, t, { strength: card.type === 'attack' });
+          dealDamageToEnemy(t, dmg);
+          log(t.name + 'に' + dmg + 'ダメージ (' + (i + 1) + '/' + e.times + ', 残HP ' + t.hp + ')');
+        }
+      }
+      break;
+    }
+    case 'block': {
+      const got = gainBlock(e.value);
+      log('ブロック+' + got + ' (合計' + B.block + ')');
+      break;
+    }
+    case 'draw':
+      drawCard(e.value);
+      log('カードを' + e.value + '枚引いた');
+      break;
+    case 'status': {
+      for (const t of targets){
+        t.status[e.key] = (t.status[e.key] || 0) + e.value;
+        log(t.name + 'に' + STATUS_NAME[e.key] + e.value + 'を付与');
+      }
+      break;
+    }
+    case 'evade':
+      B.evade += e.value;
+      log('回避態勢(' + B.evade + '回)');
+      break;
+    case 'blockPerTurn':
+      B.blockPerTurn.push({ value: e.value, turnsLeft: e.turns === 0 ? Infinity : e.turns });
+      log(e.turns === 0 ? '毎ターン開始時にブロック' + e.value
+                        : e.turns + 'ターンの間ターン開始時にブロック' + e.value);
+      break;
+    case 'energy':
+      B.energy += e.value;
+      log('Energy+' + e.value + ' (残り' + B.energy + ')');
+      break;
+    case 'strength':
+      B.status.strength += e.value;
+      log('力+' + e.value + ' (合計' + B.status.strength + ')');
+      break;
+    case 'counter':
+      B.counter = e.value;
+      log('カウンター体勢(' + e.value + 'ダメージ反撃)');
+      break;
+    case 'reflect':
+      B.reflectPending = 1;
+      log('反発: ターン終了時に残ブロック分を反射する');
+      break;
+    case 'keepBlock':
+      B.keepBlock = true;
+      log('以降、ブロックはターン終了時に消滅しない');
+      break;
+    case 'damagePerAttackPlayed': {
+      const base = e.base + B.attacksPlayedThisTurn * e.per;
+      for (const t of targets){
+        const dmg = calcDamage(base, me, t, { strength: card.type === 'attack' });
+        dealDamageToEnemy(t, dmg);
+        log(t.name + 'に' + dmg + 'ダメージ'
+            + ' (使用済ATTACK ' + B.attacksPlayedThisTurn + '枚, 残HP ' + t.hp + ')');
+      }
+      break;
+    }
+    case 'damagePerAttackInHand': {
+      const n = B.hand.filter(h => CARDS[h.id].cat === 'ATTACK').length;
+      const base = e.base + n * e.per;
+      for (const t of targets){
+        const dmg = calcDamage(base, me, t, { strength: card.type === 'attack' });
+        dealDamageToEnemy(t, dmg);
+        log(t.name + 'に' + dmg + 'ダメージ (手札のATTACK ' + n + '枚, 残HP ' + t.hp + ')');
+      }
+      break;
+    }
+    // 場に残って初めて効く継続効果。使用時点では何もしない
+    case 'blockOnPower':
+    case 'blockBonus':
+      break;
+    default:
+      console.warn('未知のeffect: ' + e.type);
+  }
+}
+
+/* --- カードテキストの動的生成 --- */
+
+/** blockBonus(完全防御)込みの実効ブロック値 */
+function previewBlock(v){
+  if (!B) return v;
+  let amount = v;
+  for (const p of B.powers)
+    for (const e of effectiveCard(p).effects) if (e.type === 'blockBonus') amount += e.value;
+  return Math.max(0, amount);
+}
+
+/** 現在の場の状態で、そのカードが実際に与えるダメージ */
+function previewDamage(base, card, target){
+  if (!B) return base;
+  return calcDamage(base, playerActor(), target || { status: newStatus() },
+                    { strength: card.type === 'attack' });
+}
+
+function effectText(e, card, target, excludeUid){
+  const all = card.target === 'all' ? '敵全体に' : '';
+  switch (e.type){
+    case 'damage':
+      return previewDamage(e.value, card, target) + 'ダメージ';
+    case 'damageMulti':
+      return previewDamage(e.value, card, target) + 'ダメージ×' + e.times + '回';
+    case 'damagePerAttackPlayed': {
+      const n = B ? B.attacksPlayedThisTurn : 0;
+      return previewDamage(e.base + n * e.per, card, target) + 'ダメージ'
+           + '(基本' + e.base + '+使用済ATTACK×' + e.per + ')';
+    }
+    case 'damagePerAttackInHand': {
+      const n = B ? B.hand.filter(h => CARDS[h.id].cat === 'ATTACK'
+                                       && h.uid !== excludeUid).length : 0;
+      return previewDamage(e.base + n * e.per, card, target) + 'ダメージ'
+           + '(基本' + e.base + '+手札ATTACK×' + e.per + ')';
+    }
+    case 'block':       return 'ブロック' + previewBlock(e.value);
+    case 'draw':        return 'カードを' + e.value + '枚引く';
+    case 'energy':      return 'Energy+' + e.value;
+    case 'status':      return all + STATUS_NAME[e.key] + e.value + 'を付与';
+    case 'strength':    return '力+' + e.value;
+    case 'evade':       return '受ける攻撃' + e.value + '回を無効化';
+    case 'counter':     return 'このターン攻撃を受けたら' + e.value + 'ダメージ反撃(1回)';
+    case 'blockPerTurn':return (e.turns === 0 ? '毎ターン開始時' : e.turns + 'ターンの間ターン開始時')
+                             + 'にブロック' + previewBlock(e.value);
+    case 'reflect':     return 'ターン終了時、残ブロック分を敵全体に反射';
+    case 'blockOnPower':return 'POWERカードを使うたびブロック' + e.value;
+    case 'blockBonus':  return 'ブロックを得るたび追加で+' + e.value;
+    case 'keepBlock':   return 'この戦闘中ブロックがターン終了時に消えない';
+    default:            return e.type;
+  }
+}
+
+/* --- ターン終了 / 敵ターン --- */
+function endPlayerTurn(){
+  if (B.phase !== 'PLAYER') return;
+  B.phase = 'ENEMY';
+  B.selecting = null;
+
+  // 反発: 残ブロック分を敵全体に反射
+  if (B.reflectPending > 0 && B.block > 0){
+    const me = playerActor();
+    for (const t of livingEnemies()){
+      const dmg = calcDamage(B.block, me, t, { strength:false, weak:false });
+      dealDamageToEnemy(t, dmg);
+      log('[反発] ' + t.name + 'に' + dmg + 'ダメージ');
+    }
+  }
+  B.reflectPending = 0;
+
+  while (B.hand.length) B.discardPile.push(B.hand.pop());
+
+  if (checkBattleEnd()) return;
+  render();
+  setTimeout(runEnemyTurn, 350);
+}
+
+function runEnemyTurn(){
+  if (!B || B.phase !== 'ENEMY') return;
+  const queue = livingEnemies().slice();
+  const step = () => {
+    if (!B || B.phase !== 'ENEMY') return;
+    const e = queue.shift();
+    if (!e){ finishEnemyTurn(); return; }
+    if (e.alive) actEnemy(e);
+    render();
+    if (checkBattleEnd()) return;
+    setTimeout(step, 320);
+  };
+  step();
+}
+
+function actEnemy(e){
+  e.block = 0;                                  // 敵のブロックは自ターン開始時に消える
+  syncPhase(e);
+  const act = e.intent || decideIntent(e);
+  const d = DIFFICULTY[G.run.difficulty];
+
+  if (act.intent === 'attack'){
+    e.attackingUntil = Date.now() + 260;
+    const times = act.times || 1;
+    const base = Math.floor(act.value * d.enemyDmgMult);
+    for (let i = 0; i < times; i++){
+      const dmg = calcDamage(base, e, playerActor(), {});
+      log(e.name + 'の攻撃' + (times > 1 ? '(' + (i + 1) + '/' + times + ')' : ''));
+      dealDamageToPlayer(dmg, e);
+      if (G.run.hp <= 0) break;
+    }
+  } else if (act.intent === 'block'){
+    e.block += act.value;
+    log(e.name + 'はブロック' + act.value + 'を得た');
+  } else if (act.intent === 'buff'){
+    e.status.strength += act.value;
+    log(e.name + 'の力+' + act.value);
+  } else if (act.intent === 'heal'){
+    e.hp = Math.min(e.maxHp, e.hp + act.value);
+    log(e.name + 'はHPを' + act.value + '回復した (' + e.hp + ')');
+  }
+  // 複合キー
+  if (act.strength){ e.status.strength += act.strength; log(e.name + 'の力+' + act.strength); }
+  if (act.heal && act.intent !== 'heal'){
+    e.hp = Math.min(e.maxHp, e.hp + act.heal);
+    log(e.name + 'はHPを' + act.heal + '回復した (' + e.hp + ')');
+  }
+  if (act.status){
+    for (const k in act.status){
+      B.status[k] = (B.status[k] || 0) + act.status[k];
+      log('プレイヤーに' + STATUS_NAME[k] + act.status[k] + 'を付与');
+    }
+  }
+
+  if (e.status.weak > 0) e.status.weak--;
+  if (e.status.vulnerable > 0) e.status.vulnerable--;
+  e.turnCount++;
+  advancePattern(e);
+}
+
+function finishEnemyTurn(){
+  // ターン終了時: 出血
+  for (const e of livingEnemies()){
+    if (e.status.bleed > 0){
+      const amount = fireRelicHook('onBleedDamage', { amount: e.status.bleed, enemy: e }).amount;
+      dealDamageToEnemy(e, amount, { ignoreBlock:true });
+      log('[出血] ' + e.name + 'に' + amount + 'ダメージ (残HP ' + e.hp + ')');
+    }
+  }
+  if (checkBattleEnd()) return;
+  startPlayerTurn();
+  render();
+}
+
+/* --- 敵AI --- */
+
+/** hpThreshold は数値、または難易度パラメータ名('bossPhase2') */
+function phaseThreshold(ph){
+  if (typeof ph.hpThreshold === 'number') return ph.hpThreshold;
+  return DIFFICULTY[G.run.difficulty][ph.hpThreshold];
+}
+
+/** HP割合から現在のフェーズ番号を求める(phases は閾値の降順) */
+function phaseIndexFor(e){
+  const def = ENEMIES[e.id];
+  const ratio = e.maxHp > 0 ? e.hp / e.maxHp : 0;
+  let idx = 0;
+  for (let i = 0; i < def.phases.length; i++){
+    if (ratio <= phaseThreshold(def.phases[i])) idx = i;
+  }
+  return idx;
+}
+
+/** フェーズ切替を検出して onEnter を発火する */
+function syncPhase(e){
+  if (!e.alive) return false;
+  const next = phaseIndexFor(e);
+  // フェーズは一方向。自己回復でHPが戻っても前の(弱い)フェーズには戻さない
+  if (next <= e.phaseIdx) return false;
+  e.phaseIdx = next;
+  e.patternIdx = 0;
+  const ph = ENEMIES[e.id].phases[next];
+  if (ph.onEnter) log(ph.onEnter(e));
+  e.intent = decideIntent(e);
+  return true;
+}
+
+function currentPhase(e){
+  const def = ENEMIES[e.id];
+  return def.phases[e.phaseIdx] || def.phases[0];
+}
+
+function decideIntent(e){
+  const ph = currentPhase(e);
+  if (ph.weighted) return weightedPick(ph.pattern);
+  return ph.pattern[e.patternIdx % ph.pattern.length];
+}
+
+function advancePattern(e){
+  if (!currentPhase(e).weighted) e.patternIdx++;
+  if (e.alive) e.intent = decideIntent(e);
+}
+
+/* --- 勝敗判定 --- */
+function checkBattleEnd(){
+  if (G.run.hp <= 0){
+    B.phase = 'LOSE';
+    log('敗北…');
+    setTimeout(() => { go('GAMEOVER'); }, 400);
+    return true;
+  }
+  if (!livingEnemies().length){
+    B.phase = 'WIN';
+    log('戦闘に勝利した!');
+    const node = currentNode();
+    const boss = node && node.type === 'BOSS';
+    if (boss) G.meta[G.run.difficulty === 'HARD' ? 'clearedHard' : 'clearedNormal'] = true;
+    setTimeout(() => { go(boss ? 'VICTORY' : 'REWARD'); }, 400);
+    return true;
+  }
+  return false;
+}
+
+/* ===== SECTION: SCREENS ===== */
+const SCREENS = ['TITLE','DIFFICULTY','EXERCISE','DECK_PREVIEW','MAP','BATTLE','REWARD',
+                 'SHOP','REST','EVENT','TREASURE','META','GAMEOVER','VICTORY'];
+
+function go(screen){
+  if (!SCREENS.includes(screen)) throw new Error('未知の画面: ' + screen);
+  G.screen = screen;
+  render();
+}
+
+function render(){
+  B = G.battle;
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  const fn = RENDERERS[G.screen] || renderPlaceholder;
+  const nodes = fn();
+  for (const n of (Array.isArray(nodes) ? nodes : [nodes])) if (n) app.appendChild(n);
+  if (DEBUG) app.appendChild(renderDebugPanel());
+  if (G.screen === 'BATTLE') flushPopups();
+}
+
+/* --- 共通パーツ --- */
+
+/** ラン中の画面で使い回すヘッダ */
+function renderHud(){
+  const r = G.run;
+  if (!r) return null;
+  const hud = el('div', 'mr-hud');
+  hud.appendChild(el('span', 'chip', '❤ <span class="hpv">' + r.hp + '</span>/' + r.maxHp));
+  hud.appendChild(el('span', 'chip', '💰 <span class="goldv">' + r.gold + '</span>'));
+  const relics = el('span', 'chip mr-relics');
+  if (!r.relics.length) relics.textContent = '—';
+  const now = Date.now();
+  let flashing = false;
+  for (const id of r.relics){
+    const rel = RELICS[id];
+    if (!rel) continue;
+    const fresh = relicFlash[id] && (now - relicFlash[id] < 600);
+    if (fresh) flashing = true;
+    const icon = el('span', 'relic' + (fresh ? ' flash' : ''), rel.icon);
+    icon.title = rel.name + ' — ' + rel.desc;
+    relics.appendChild(icon);
+  }
+  relics.addEventListener('click', showRelicList);
+  hud.appendChild(relics);
+  if (flashing) scheduleRender(650);
+  hud.appendChild(el('span', 'mr-spacer'));
+  const d = DIFFICULTY[r.difficulty];
+  hud.appendChild(el('span', 'mr-badge' + (r.difficulty === 'HARD' ? ' hard' : ''), d.label));
+  return hud;
+}
+
+/** カード1枚の DOM。opts: {playable, disabled, onClick, showCost} */
+function renderCardEl(inst, opts){
+  opts = opts || {};
+  const c = effectiveCard(inst);
+  const cls = ['mr-card', 'cat-' + c.cat, 'rar-' + c.rarity];
+  if (inst.upgraded) cls.push('upgraded');
+  if (opts.playable) cls.push('playable');
+  if (opts.disabled) cls.push('disabled');
+  const node = el('div', cls.join(' '));
+  if (opts.showCost !== false){
+    node.appendChild(el('div', 'ccost', String(opts.cost != null ? opts.cost : c.cost)));
+  }
+  node.appendChild(el('div', 'cname', c.name));
+  node.appendChild(el('div', 'ctext', opts.text != null ? opts.text : cardDisplayText(inst)));
+  node.appendChild(el('div', 'ctag', CAT_LABEL[c.cat] + ' / ' + RARITY_LABEL[c.rarity]));
+  if (opts.onClick && !opts.disabled) node.addEventListener('click', () => opts.onClick(inst));
+  // 長押し / 右クリックで詳細
+  let holdTimer = null;
+  const showDetail = (e) => {
+    if (e) e.preventDefault();
+    showCardDetail(inst, opts.text);
+  };
+  node.addEventListener('contextmenu', showDetail);
+  node.addEventListener('pointerdown', () => { holdTimer = setTimeout(showDetail, 500); });
+  for (const ev of ['pointerup','pointerleave','pointercancel'])
+    node.addEventListener(ev, () => { if (holdTimer){ clearTimeout(holdTimer); holdTimer = null; } });
+  return node;
+}
+
+/** カードのグリッド表示 */
+function renderDeckList(cards, opts){
+  const grid = el('div', 'mr-grid');
+  for (const inst of cards) grid.appendChild(renderCardEl(inst, opts));
+  return grid;
+}
+
+function renderCores(cores){
+  const wrap = el('div', 'mr-cores');
+  for (const ex of EXERCISES){
+    const c = el('div', 'mr-core ' + ex.core);
+    c.appendChild(el('div', 'n', String(cores[ex.core] || 0)));
+    c.appendChild(el('div', 'l', ex.coreLabel));
+    wrap.appendChild(c);
+  }
+  return wrap;
+}
+
+/* --- タイトル --- */
+function renderTitle(){
+  const s = el('div', 'mr-screen');
+  const head = el('div', 'mr-center');
+  head.appendChild(el('h1', 'mr-title', '筋トレ融合<br>ローグライク'));
+  head.appendChild(el('p', 'mr-sub', 'その日の筋トレが、そのままデッキになる。'));
+  s.appendChild(head);
+
+  const panel = el('div', 'mr-panel');
+  panel.appendChild(el('div', 'mr-note', '所持している筋力コア'));
+  panel.appendChild(renderCores(G.meta.cores));
+  s.appendChild(panel);
+
+  if (G.run){
+    s.appendChild(btn('冒険を再開する', 'primary', () => go('MAP')));
+    s.appendChild(btn('ランを破棄して最初から', 'ghost', () => {
+      if (!confirm('進行中のランを破棄しますか?')) return;
+      G.run = null; saveGame(); render();
+    }));
+  } else {
+    s.appendChild(btn('ラン開始', 'primary', () => go('DIFFICULTY')));
+  }
+  s.appendChild(btn('強化所', '', () => go('META')));
+  s.appendChild(btn('設定', 'ghost', showSettings));
+
+  s.appendChild(el('div', 'mr-spacer'));
+  const foot = el('div', 'mr-note mr-center');
+  foot.innerHTML = 'Phase 9 — 演出・バランス調整<br>'
+    + 'カード ' + Object.keys(CARDS).length + '種 / 敵 ' + Object.keys(ENEMIES).length + '種 / レリック '
+    + Object.keys(RELICS).length + '種';
+  s.appendChild(foot);
+  return s;
+}
+
+/* --- 未実装画面の受け皿 --- */
+const PLACEHOLDER_INFO = {
+  DIFFICULTY:   ['難易度選択',   'Phase 1 で実装'],
+  EXERCISE:     ['運動記録の入力','Phase 1 で実装'],
+  DECK_PREVIEW: ['デッキ確認',   'Phase 1 で実装'],
+  MAP:          ['マップ',       'Phase 5 で実装'],
+  BATTLE:       ['戦闘',         'Phase 2 で実装'],
+  REWARD:       ['戦闘報酬',     'Phase 6 で実装'],
+  SHOP:         ['ショップ',     'Phase 6 で実装'],
+  REST:         ['休憩所',       'Phase 6 で実装'],
+  EVENT:        ['イベント',     'Phase 6 で実装'],
+  TREASURE:     ['宝箱',         'Phase 6 で実装'],
+  META:         ['強化所',       'Phase 8 で実装'],
+  GAMEOVER:     ['敗北',         'Phase 6 で実装'],
+  VICTORY:      ['制覇',         'Phase 6 で実装']
+};
+
+function renderPlaceholder(){
+  const info = PLACEHOLDER_INFO[G.screen] || [G.screen, ''];
+  const s = el('div', 'mr-screen');
+  const hud = renderHud();
+  const ph = el('div', 'mr-placeholder');
+  ph.appendChild(el('div', 'mr-title', info[0]));
+  ph.appendChild(el('div', 'mr-sub', info[1]));
+  s.appendChild(ph);
+  s.appendChild(btn('タイトルへ戻る', 'ghost', () => go('TITLE')));
+  return hud ? [hud, s] : s;
+}
+
+/* --- 難易度選択 --- */
+function renderDifficulty(){
+  const s = el('div', 'mr-screen');
+  s.appendChild(el('h2', 'mr-title', '難易度を選ぶ'));
+  s.appendChild(el('p', 'mr-sub', 'ラン開始後は変更できません。'));
+
+  const wrap = el('div', 'mr-diff');
+  wrap.appendChild(makeDiffButton('NORMAL', 'normal', [
+    '最大HP 70 / 標準の敵',
+    '休憩で最大HPの30%回復',
+    '報酬 ×1.0'
+  ]));
+  const hardBtn = makeDiffButton('HARD', 'hard', [
+    '最大HP 60(-10)',
+    '敵のHP・攻撃力 ×1.25',
+    '敵は開始時から力を持つ(通常+1 / エリート・ボス+2)',
+    'ボスが早く本気になる(HP60%で第2段階)',
+    'エリートが出やすく、休憩は出にくい',
+    '休憩の回復は最大HPの20%、ショップ価格 ×1.25',
+    '報酬(ゴールド・筋力コア) ×1.2',
+  ]);
+  if (!hardUnlocked()){
+    hardBtn.disabled = true;
+    hardBtn.classList.add('locked');
+    hardBtn.querySelector('.dn').innerHTML = '🔒 むずい';
+    hardBtn.appendChild(el('div', 'mr-locked', '「ふつう」を1回クリアすると解放されます'));
+  }
+  wrap.appendChild(hardBtn);
+  s.appendChild(wrap);
+
+  s.appendChild(el('div', 'mr-spacer'));
+  s.appendChild(btn('戻る', 'ghost', () => go('TITLE')));
+  return s;
+}
+
+function makeDiffButton(key, cls, lines){
+  const d = DIFFICULTY[key];
+  const b = el('button', 'mr-diffbtn ' + cls);
+  b.type = 'button';
+  b.appendChild(el('div', 'dn', (key === 'HARD' ? '🔥 ' : '🟦 ') + d.label));
+  b.appendChild(el('div', 'dd', lines.map(l => '・' + l).join('<br>')));
+  b.addEventListener('click', () => {
+    G.draft = newDraft(key);
+    go('EXERCISE');
+  });
+  return b;
+}
+
+/* --- 運動記録の入力 --- */
+function renderExercise(){
+  if (!G.draft) { G.draft = newDraft('NORMAL'); }
+  const draft = G.draft;
+  const d = DIFFICULTY[draft.difficulty];
+
+  const s = el('div', 'mr-screen');
+  const head = el('div');
+  head.appendChild(el('h2', 'mr-title', '今日の運動記録'));
+  head.appendChild(el('p', 'mr-sub',
+    '回数がそのままデッキになる。難易度: <b>' + d.label + '</b>'));
+  s.appendChild(head);
+
+  const scroll = el('div', 'mr-scroll');
+  const updaters = [];
+
+  for (const ex of EXERCISES){
+    const box = el('div', 'mr-ex cat-' + ex.cat);
+    const h = el('div', 'exhead');
+    h.appendChild(el('span', 'exname', ex.label));
+    h.appendChild(el('span', 'excat', CAT_NAME[ex.cat] + '(' + CAT_LABEL[ex.cat] + ')'));
+    box.appendChild(h);
+
+    const row = el('div', 'exinput');
+    const input = el('input');
+    input.type = 'number'; input.min = '0'; input.step = '1';
+    input.value = String(draft.exercise[ex.key] || 0);
+    input.setAttribute('aria-label', ex.label);
+
+    const out = el('div', 'exout');
+    const update = () => {
+      let v = Math.max(0, Math.floor(Number(input.value) || 0));
+      input.value = String(v);
+      draft.exercise[ex.key] = v;
+      const count = toCount(ex.key, v);
+      const cards = cardsFromCount(count);
+      const cores = coresGained(count, draft.difficulty);
+      const parts = [];
+      if (ex.key === 'plankSeconds'){
+        parts.push('<span>' + v + '秒 → <b>' + count + 'カウント</b>相当</span>');
+      }
+      parts.push('<span>生成カード <b class="' + (cards ? '' : 'zero') + '">' + cards + '枚</b>'
+                 + (cards === 4 ? '(上限)' : '') + '</span>');
+      const q = rarityBonus(count);
+      if (q > 0) parts.push('<span>上位レアリティ率 <b>+' + q + '%</b></span>');
+      const ub = upgradeBonus(count);
+      if (ub > 0) parts.push('<span>うち <b>' + ub + '枚が強化(+)</b></span>');
+      parts.push('<span>' + ex.coreLabel + ' <b class="' + (cores ? '' : 'zero') + '">+' + cores + '</b></span>');
+      out.innerHTML = parts.join('');
+    };
+    updaters.push(update);
+
+    // btn() は mr-btn クラスを付けてしまうので、ステッパーは個別に組む
+    const mkStep = (delta) => {
+      const b = el('button', 'mr-step', (delta > 0 ? '+' : '') + delta);
+      b.addEventListener('click', () => {
+        input.value = String(Math.max(0, (Number(input.value) || 0) + delta));
+        update(); updateTotal();
+      });
+      return b;
+    };
+    row.appendChild(mkStep(-10));
+    row.appendChild(mkStep(-1));
+    row.appendChild(input);
+    row.appendChild(mkStep(1));
+    row.appendChild(mkStep(10));
+    input.addEventListener('input', () => { update(); updateTotal(); });
+    input.addEventListener('blur', () => { update(); updateTotal(); });
+
+    box.appendChild(row);
+    box.appendChild(out);
+    scroll.appendChild(box);
+  }
+
+  const total = el('div', 'mr-panel');
+  const updateTotal = () => {
+    const counts = normalizeExercise(draft.exercise);
+    let n = 0;
+    for (const ex of EXERCISES) n += cardsFromCount(counts[ex.cat]);
+    const hs = handSizeFor(n);
+    const next = n < 8 ? 8 : (n < 14 ? 14 : null);
+    total.innerHTML =
+      '<div class="mr-note">デッキ枚数</div>'
+      + '<div style="font-size:20px;font-weight:700">' + (STARTING_DECK.length + n) + '枚'
+      + ' <span class="mr-note" style="font-size:12px">(基本' + STARTING_DECK.length + ' + 生成' + n + ')</span></div>'
+      + '<hr class="mr-hr">'
+      + '<div class="mr-note">毎ターンの手札</div>'
+      + '<div style="font-size:20px;font-weight:700' + (hs > BASE_HAND_SIZE ? ';color:var(--skl)' : '') + '">'
+      + hs + '枚' + (hs > BASE_HAND_SIZE ? ' <span class="mr-note" style="font-size:12px">(+'
+      + (hs - BASE_HAND_SIZE) + ')</span>' : '') + '</div>'
+      + (next ? '<div class="mr-note">生成カードあと' + (next - n) + '枚で手札+1</div>'
+              : '<div class="mr-note">手札ボーナス最大</div>');
+  };
+  for (const u of updaters) u();
+  updateTotal();
+  scroll.appendChild(total);
+  scroll.appendChild(el('div', 'mr-note',
+    '※ プランクは' + PLANK_SECONDS_PER_COUNT + '秒=1カウント換算。'
+    + '生成枚数は floor(√(回数÷5)) で、1種目あたり最大4枚。<br>'
+    + '※ 回数が多いほど「枚数」だけでなく「レアリティ」と「強化」も上がり、'
+    + '生成カードが8枚・14枚に達するごとに毎ターンの手札が1枚増える。'));
+  s.appendChild(scroll);
+
+  const foot = el('div', 'mr-sticky');
+  foot.appendChild(btn('この記録でデッキを組む', 'primary', () => {
+    draft.deck = buildDeck(draft.exercise, G.meta, draft.difficulty);
+    go('DECK_PREVIEW');
+  }));
+  foot.appendChild(btn('難易度を選び直す', 'ghost', () => { G.draft = null; go('DIFFICULTY'); }));
+  s.appendChild(foot);
+  return s;
+}
+
+/* --- デッキ確認 --- */
+function renderDeckPreview(){
+  const draft = G.draft;
+  if (!draft || !draft.deck){ go('EXERCISE'); return el('div'); }
+  const counts = normalizeExercise(draft.exercise);
+  const startIds = STARTING_DECK.slice();
+
+  // 初期デッキ分を取り除いた残り = 生成カード
+  const generated = [];
+  const pool = startIds.slice();
+  for (const inst of draft.deck){
+    const i = pool.indexOf(inst.id);
+    if (i >= 0) pool.splice(i, 1); else generated.push(inst);
+  }
+
+  const s = el('div', 'mr-screen');
+  const head = el('div');
+  head.appendChild(el('h2', 'mr-title', 'デッキ確認'));
+  head.appendChild(el('p', 'mr-sub',
+    '全' + draft.deck.length + '枚(基本' + startIds.length + ' + 生成' + generated.length + ')'
+    + ' / 手札' + handSizeFor(generated.length) + '枚'
+    + ' / ' + DIFFICULTY[draft.difficulty].label));
+  s.appendChild(head);
+
+  const scroll = el('div', 'mr-scroll');
+
+  // 換算表
+  const tp = el('div', 'mr-panel');
+  const t = el('table', 'mr-table');
+  t.innerHTML = '<thead><tr><th>種目</th><th>入力</th><th>換算</th><th>カード</th><th>コア</th></tr></thead>';
+  const tb = el('tbody');
+  for (const ex of EXERCISES){
+    const raw = draft.exercise[ex.key] || 0;
+    const c = counts[ex.cat];
+    const tr = el('tr');
+    tr.innerHTML = '<td>' + ex.label + '</td>'
+      + '<td>' + raw + ex.unit + '</td>'
+      + '<td>' + c + '</td>'
+      + '<td><b>' + cardsFromCount(c) + '</b></td>'
+      + '<td><b>+' + coresGained(c, draft.difficulty) + '</b></td>';
+    tb.appendChild(tr);
+  }
+  t.appendChild(tb);
+  tp.appendChild(t);
+  tp.appendChild(el('div', 'mr-note',
+    'コアはラン終了時に獲得。<b>敗北した場合は50%没収</b>(端数切り上げ)。'));
+  scroll.appendChild(tp);
+
+  // 生成カード
+  if (generated.length){
+    scroll.appendChild(el('div', 'mr-cathead', '<span>運動で生成されたカード</span><span class="bar"></span>'));
+    for (const cat of CATEGORIES){
+      const list = generated.filter(i => CARDS[i.id].cat === cat);
+      if (!list.length) continue;
+      const h = el('div', 'mr-cathead ' + cat);
+      h.innerHTML = '<span>' + CAT_NAME[cat] + '(' + CAT_LABEL[cat] + ') ' + list.length + '枚</span><span class="bar"></span>';
+      scroll.appendChild(h);
+      scroll.appendChild(renderDeckList(list, {}));
+    }
+  } else {
+    scroll.appendChild(el('div', 'mr-panel mr-note',
+      '運動由来のカードはありません。基本デッキ8枚だけで挑みます。'
+      + '<br>1種目5回(プランクは10秒)から1枚生成されます。'));
+  }
+
+  // 初期デッキ
+  scroll.appendChild(el('div', 'mr-cathead', '<span>基本デッキ</span><span class="bar"></span>'));
+  scroll.appendChild(renderDeckList(draft.deck.filter(i => generated.indexOf(i) < 0), {}));
+
+  s.appendChild(scroll);
+
+  const foot = el('div', 'mr-sticky');
+  foot.appendChild(btn('この構成で開始', 'primary', () => { startRun(draft); go('MAP'); }));
+  foot.appendChild(btn('入力し直す', 'ghost', () => go('EXERCISE')));
+  s.appendChild(foot);
+  return s;
+}
+
+
+/* --- 戦闘画面 --- */
+function renderBattle(){
+  if (!G.battle){ go('MAP'); return el('div'); }
+  B = G.battle;
+  const s = el('div', 'mr-screen mr-battle');
+
+  /* 敵 */
+  const et = el('div', 'mr-enemies');
+  const now = Date.now();
+  B.enemies.forEach((e, idx) => {
+    if (e.alive) et.appendChild(renderEnemy(e, idx));
+    else if (e.diedAt && now - e.diedAt < DEATH_ANIM_MS) et.appendChild(renderEnemy(e, idx));
+  });
+  s.appendChild(et);
+
+  /* プレイヤー状態 */
+  s.appendChild(renderPlayerStatus());
+
+  /* ログ */
+  const logBox = el('div', 'mr-log');
+  logBox.innerHTML = B.log.slice(-5).map(l => '<div>' + l + '</div>').join('');
+  s.appendChild(logBox);
+
+  s.appendChild(el('div', 'mr-spacer'));
+
+  /* 操作列 */
+  const bar = el('div', 'mr-bbar');
+  const en = el('div', 'mr-energy' + (B.energy > 0 ? ' on' : ''));
+  en.innerHTML = '<b>' + B.energy + '</b>/' + B.maxEnergy;
+  bar.appendChild(en);
+  const pile = (label, cards, shuffled) => {
+    const n = el('div', 'mr-pile', label + ' ' + cards.length);
+    n.addEventListener('click', () => openCardPicker({
+      title: label + '(' + cards.length + '枚)',
+      note: shuffled ? '順番は伏せられています' : null,
+      cards: shuffled ? shuffle(cards) : cards.slice().reverse(),
+      filter: () => false, onPick(){},
+    }));
+    return n;
+  };
+  bar.appendChild(el('div', 'mr-pile', '手札 ' + handSize()));
+  bar.appendChild(pile('山札', B.drawPile, true));
+  bar.appendChild(pile('捨札', B.discardPile, false));
+  if (B.exhaustPile.length) bar.appendChild(pile('除外', B.exhaustPile, false));
+  bar.appendChild(el('div', 'mr-spacer'));
+  const endBtn = el('button', 'mr-btn small ' + (B.phase === 'PLAYER' ? 'primary' : ''),
+                    B.phase === 'PLAYER' ? 'ターン終了' : '敵のターン…');
+  endBtn.disabled = B.phase !== 'PLAYER';
+  endBtn.addEventListener('click', () => {
+    const playable = B.hand.filter(c => canPlay(c)).length;
+    if (playable > 0 && !confirm('まだ ' + playable + '枚 使えるカードがあります。ターンを終了しますか?')) return;
+    endPlayerTurn();
+  });
+  bar.appendChild(endBtn);
+  s.appendChild(bar);
+
+  if (B.selecting != null) s.appendChild(el('div', 'mr-hint', '↑ 対象の敵を選んでください(もう一度カードを押すとキャンセル)'));
+
+  /* 手札 */
+  const hand = el('div', 'mr-hand');
+  B.hand.forEach((inst, i) => {
+    const card = effectiveCard(inst);
+    const playable = canPlay(inst);
+    const node = renderCardEl(inst, {
+      cost: cardCost(card),
+      text: cardDisplayText(inst, previewTarget(card)),
+      playable: playable,
+      disabled: !playable,
+      onClick: () => onHandCardClick(i)
+    });
+    if (B.selecting === i) node.classList.add('selected');
+    hand.appendChild(node);
+  });
+  if (!B.hand.length) hand.appendChild(el('div', 'mr-note', '手札なし'));
+  s.appendChild(hand);
+
+  return s;
+}
+
+function renderEnemy(e, idx){
+  const selectable = e.alive && B.selecting != null;
+  const attacking = e.attackingUntil && Date.now() < e.attackingUntil;
+  const n = el('div', 'mr-enemy'
+    + (selectable ? ' targetable' : '')
+    + (e.alive ? '' : ' dead')
+    + (e.enraged ? ' enraged' : '')
+    + (attacking && motionOn() ? ' attacking' : ''));
+  n.setAttribute('data-pop', e.uid);
+  if (attacking) scheduleRender(280);
+  n.appendChild(el('div', 'eintent', e.alive ? intentText(e) : ''));
+  n.appendChild(el('div', 'ename', e.name + (e.tier === 'BOSS' ? ' ' + phaseLabel(e) : '')));
+  const bar = el('div', 'mr-bar');
+  const fill = el('div', 'fill');
+  fill.style.width = Math.max(0, (e.hp / e.maxHp) * 100) + '%';
+  bar.appendChild(fill);
+  // ボスはフェーズ切替の閾値をバー上に表示する
+  const def = ENEMIES[e.id];
+  if (def.phases.length > 1){
+    for (let i = 1; i < def.phases.length; i++){
+      const mark = el('span', 'phasemark');
+      mark.style.left = (phaseThreshold(def.phases[i]) * 100) + '%';
+      bar.appendChild(mark);
+    }
+  }
+  bar.appendChild(el('span', 'barlabel', e.hp + ' / ' + e.maxHp));
+  n.appendChild(bar);
+  const row = el('div', 'estat');
+  if (e.block > 0) row.appendChild(el('span', 'sblock', '🛡' + e.block));
+  for (const k of ['weak','vulnerable','bleed','strength']){
+    if (e.status[k] > 0) row.appendChild(el('span', 'stag ' + k,
+      STATUS_ICON[k] + e.status[k]));
+  }
+  n.appendChild(row);
+  if (selectable){
+    n.addEventListener('click', () => playCard(B.selecting, idx));
+  }
+  return n;
+}
+
+function phaseLabel(e){
+  const n = ENEMIES[e.id].phases.length;
+  return n > 1 ? '(第' + (e.phaseIdx + 1) + '段階)' : '';
+}
+
+function intentText(e){
+  const act = e.intent;
+  if (!act) return '';
+  const d = DIFFICULTY[G.run.difficulty];
+  const parts = [];
+  if (act.intent === 'attack'){
+    const dmg = calcDamage(Math.floor(act.value * d.enemyDmgMult), e, playerActor(), {});
+    parts.push(INTENT_ICON.attack + ' ' + dmg + (act.times > 1 ? '×' + act.times : ''));
+  } else if (act.intent === 'block'){
+    parts.push(INTENT_ICON.block + ' ' + act.value);
+  } else if (act.intent === 'heal'){
+    parts.push(INTENT_ICON.heal + ' ' + act.value);
+  } else if (act.intent === 'buff'){
+    parts.push(INTENT_ICON.buff + (act.value ? ' ' + act.value : ''));
+  } else if (act.intent === 'debuff'){
+    parts.push(INTENT_ICON.debuff);
+  }
+  if (act.strength) parts.push(INTENT_ICON.buff);
+  if (act.heal && act.intent !== 'heal') parts.push(INTENT_ICON.heal + ' ' + act.heal);
+  if (act.status && act.intent !== 'debuff') parts.push(INTENT_ICON.debuff);
+  return parts.join(' ');
+}
+
+function renderPlayerStatus(){
+  const p = el('div', 'mr-pstat');
+  p.setAttribute('data-pop', 'player');
+  const bar = el('div', 'mr-bar hp');
+  const fill = el('div', 'fill');
+  fill.style.width = Math.max(0, (G.run.hp / G.run.maxHp) * 100) + '%';
+  bar.appendChild(fill);
+  bar.appendChild(el('span', 'barlabel', '❤ ' + G.run.hp + ' / ' + G.run.maxHp));
+  p.appendChild(bar);
+
+  const row = el('div', 'estat');
+  if (B.block > 0)  row.appendChild(el('span', 'sblock', '🛡' + B.block + (B.keepBlock ? '*' : '')));
+  if (B.evade > 0)  row.appendChild(el('span', 'stag evade', '💨' + B.evade));
+  if (B.counter > 0)row.appendChild(el('span', 'stag counter', '↩' + B.counter));
+  for (const k of ['weak','vulnerable','strength']){
+    if (B.status[k] > 0) row.appendChild(el('span', 'stag ' + k, STATUS_ICON[k] + B.status[k]));
+  }
+  for (const bp of B.blockPerTurn){
+    row.appendChild(el('span', 'stag', '🛡/T ' + bp.value
+      + (bp.turnsLeft === Infinity ? '' : '(' + bp.turnsLeft + ')')));
+  }
+  // 場のPower
+  const powerCount = {};
+  for (const p2 of B.powers) powerCount[p2.id] = (powerCount[p2.id] || 0) + 1;
+  for (const id in powerCount){
+    row.appendChild(el('span', 'stag power',
+      CARDS[id].name + (powerCount[id] > 1 ? '×' + powerCount[id] : '')));
+  }
+  if (row.childNodes.length) p.appendChild(row);
+  p.appendChild(el('div', 'mr-note', 'ターン ' + B.turn));
+  return p;
+}
+
+/** 現在の状態(力・脆弱・完全防御・使用済ATTACK枚数)を反映したカードテキスト */
+function cardDisplayText(inst, target){
+  const c = effectiveCard(inst);
+  const body = c.effects.map(e => effectText(e, c, target, inst.uid)).join(' / ');
+  return (c.keep ? '【Power】' : '') + body + (c.exhaust ? ' / 除外' : '');
+}
+
+/** 手札のテキスト表示で使う「たぶんこの敵に当たる」対象 */
+function previewTarget(card){
+  const alive = livingEnemies();
+  if (!alive.length) return null;
+  if (card.target === 'all') return alive[0];
+  if (B.selecting != null && B.enemies[B.selecting]) return null;
+  return alive.length === 1 ? alive[0] : null;
+}
+
+function onHandCardClick(i){
+  const inst = B.hand[i];
+  if (!inst || !canPlay(inst)) return;
+  const card = effectiveCard(inst);
+  const alive = livingEnemies();
+  if (card.target === 'single' && alive.length > 1){
+    B.selecting = (B.selecting === i) ? null : i;
+    render();
+    return;
+  }
+  const idx = B.enemies.findIndex(e => e.alive);
+  playCard(i, idx);
+}
+
+/* --- カード詳細 --- */
+function showCardDetail(inst, textOverride){
+  const c = effectiveCard(inst);
+  const ov = el('div', 'mr-modal');
+  const box = el('div', 'mr-modalbox');
+  box.appendChild(el('div', 'mr-modaltitle', c.name));
+  box.appendChild(el('div', 'mr-note',
+    CAT_NAME[c.cat] + '(' + CAT_LABEL[c.cat] + ') / ' + RARITY_LABEL[c.rarity]
+    + ' / コスト ' + (G.battle ? cardCost(c) : c.cost)
+    + (c.target === 'all' ? ' / 敵全体' : c.target === 'self' ? ' / 自分' : ' / 単体')));
+  box.appendChild(el('div', 'mr-panel', textOverride || cardDisplayText(inst, null)));
+  if (!inst.upgraded && c.up){
+    box.appendChild(el('div', 'mr-note', '強化すると:'));
+    box.appendChild(el('div', 'mr-panel',
+      cardDisplayText({ uid:inst.uid, id:inst.id, upgraded:true }, null)));
+  }
+  box.appendChild(btn('閉じる', 'ghost', () => document.body.removeChild(ov)));
+  ov.appendChild(box);
+  ov.addEventListener('click', (e) => { if (e.target === ov) document.body.removeChild(ov); });
+  document.body.appendChild(ov);
+}
+
+/* --- 設定 --- */
+function showSettings(){
+  const ov = el('div', 'mr-modal');
+  const box = el('div', 'mr-modalbox');
+  box.appendChild(el('div', 'mr-modaltitle', '設定'));
+
+  const mo = btn('アニメーション: ' + (motionOn() ? 'オン' : 'オフ'), '', () => {
+    G.meta.settings.reduceMotion = motionOn();
+    saveGame();
+    document.body.removeChild(ov);
+    showSettings();
+  });
+  box.appendChild(mo);
+  box.appendChild(el('div', 'mr-note',
+    'ダメージ表示・画面の揺れ・敵のモーションをまとめて切り替えます。'));
+
+  box.appendChild(el('hr', 'mr-hr'));
+  box.appendChild(btn('セーブデータを削除', '', () => {
+    if (!confirm('筋力コアと開放状況を含め、全て消えます。よろしいですか?')) return;
+    if (!confirm('本当に削除しますか? 取り消せません。')) return;
+    resetSave();
+    document.body.removeChild(ov);
+    go('TITLE');
+  }));
+  box.appendChild(btn('閉じる', 'ghost', () => document.body.removeChild(ov)));
+  ov.appendChild(box);
+  ov.addEventListener('click', (e) => { if (e.target === ov) document.body.removeChild(ov); });
+  document.body.appendChild(ov);
+}
+
+/* --- レリック --- */
+function showRelicList(){
+  const ov = el('div', 'mr-modal');
+  const box = el('div', 'mr-modalbox');
+  box.appendChild(el('div', 'mr-modaltitle', '所持レリック'));
+  const ids = G.run ? G.run.relics : [];
+  if (!ids.length) box.appendChild(el('div', 'mr-note', 'まだ何も持っていない'));
+  for (const id of ids){
+    const r = RELICS[id];
+    if (!r) continue;
+    box.appendChild(el('div', 'mr-panel',
+      r.icon + ' <b>' + r.name + '</b><br><span class="mr-note">' + r.desc + '</span>'));
+  }
+  box.appendChild(btn('閉じる', 'ghost', () => document.body.removeChild(ov)));
+  ov.appendChild(box);
+  ov.addEventListener('click', (e) => { if (e.target === ov) document.body.removeChild(ov); });
+  document.body.appendChild(ov);
+}
+
+/** 画面下に短く出る通知 */
+function toast(html){
+  const t = el('div', 'mr-toast', html);
+  document.body.appendChild(t);
+  setTimeout(() => { if (t.parentNode) t.parentNode.removeChild(t); }, 2600);
+}
+
+/* --- カード選択モーダル(除去 / 強化 で共用) --- */
+function openCardPicker(opts){
+  const ov = el('div', 'mr-modal');
+  const box = el('div', 'mr-modalbox');
+  box.appendChild(el('div', 'mr-modaltitle', opts.title));
+  if (opts.note) box.appendChild(el('div', 'mr-note', opts.note));
+  const list = el('div', 'mr-modallist');
+  const cards = opts.cards;
+  if (!cards.length) list.appendChild(el('div', 'mr-note', '対象のカードがありません'));
+  for (const inst of cards){
+    const disabled = opts.filter ? !opts.filter(inst) : false;
+    list.appendChild(renderCardEl(inst, {
+      playable: !disabled, disabled: disabled,
+      onClick: () => {
+        if (!confirm(effectiveCard(inst).name + ' を選びますか?')) return;
+        document.body.removeChild(ov);
+        opts.onPick(inst);
+      },
+    }));
+  }
+  box.appendChild(list);
+  if (opts.cancelable !== false){
+    box.appendChild(btn('やめる', 'ghost', () => document.body.removeChild(ov)));
+  }
+  ov.appendChild(box);
+  ov.addEventListener('click', (e) => {
+    if (e.target === ov && opts.cancelable !== false) document.body.removeChild(ov);
+  });
+  document.body.appendChild(ov);
+}
+
+/* --- 戦闘報酬 --- */
+function renderReward(){
+  const run = G.run;
+  if (!run.pendingReward){
+    const node = currentNode();
+    run.pendingReward = makeReward(node ? node.type : 'COMBAT');
+    saveGame();
+  }
+  const rw = run.pendingReward;
+
+  const s = el('div', 'mr-screen');
+  s.appendChild(el('h2', 'mr-title', '戦闘に勝利!'));
+  const scroll = el('div', 'mr-scroll');
+
+  // ゴールド
+  const gp = el('div', 'mr-panel mr-row');
+  gp.appendChild(el('div', '', '💰 ゴールド <b style="color:var(--gold)">' + rw.gold + '</b>'));
+  gp.appendChild(el('div', 'mr-spacer'));
+  if (rw.goldTaken) gp.appendChild(el('span', 'mr-badge', '受取済'));
+  else gp.appendChild(btn('受け取る', 'small primary', () => {
+    gainGold(rw.gold); rw.goldTaken = true; saveGame(); render();
+  }));
+  scroll.appendChild(gp);
+
+  // レリック
+  if (rw.relic){
+    const rp = el('div', 'mr-panel mr-row');
+    const r = RELICS[rw.relic];
+    rp.appendChild(el('div', '', r.icon + ' <b>' + r.name + '</b><br><span class="mr-note">' + r.desc + '</span>'));
+    rp.appendChild(el('div', 'mr-spacer'));
+    if (rw.relicTaken) rp.appendChild(el('span', 'mr-badge', '受取済'));
+    else rp.appendChild(btn('受け取る', 'small primary', () => {
+      gainRelic(rw.relic); rw.relicTaken = true; saveGame(); render();
+    }));
+    scroll.appendChild(rp);
+  }
+
+  // カード
+  scroll.appendChild(el('div', 'mr-cathead',
+    '<span>カードを1枚選ぶ' + (rw.cardTaken ? '(選択済)' : '') + '</span><span class="bar"></span>'));
+  const grid = el('div', 'mr-grid');
+  for (const id of rw.cards){
+    const inst = { uid:-1, id:id, upgraded:false };
+    grid.appendChild(renderCardEl(inst, {
+      playable: !rw.cardTaken, disabled: rw.cardTaken,
+      onClick: () => {
+        addCardToDeck(id, false); rw.cardTaken = true; saveGame(); render();
+      },
+    }));
+  }
+  scroll.appendChild(grid);
+  s.appendChild(scroll);
+
+  const foot = el('div', 'mr-sticky');
+  if (!rw.cardTaken){
+    foot.appendChild(btn('カードを取らずに進む(スキップ)', 'ghost', () => {
+      rw.cardTaken = true; saveGame(); render();
+    }));
+  }
+  foot.appendChild(btn('マップへ戻る', 'primary', () => {
+    if (!rw.goldTaken) gainGold(rw.gold);
+    if (rw.relic && !rw.relicTaken) gainRelic(rw.relic);
+    run.pendingReward = null;
+    G.battle = null; B = null;
+    saveGame(); go('MAP');
+  }));
+  s.appendChild(foot);
+  return [renderHud(), s];
+}
+
+/* --- 休憩所 --- */
+function renderRest(){
+  const run = G.run;
+  const node = currentNode();
+  const d = DIFFICULTY[run.difficulty];
+  const heal = Math.ceil(run.maxHp * d.restHealRate);
+  const s = el('div', 'mr-screen');
+  s.appendChild(el('h2', 'mr-title', '🔥 休憩所'));
+  const nextIsBoss = node && node.row === BOSS_ROW - 1;
+  if (nextIsBoss) s.appendChild(el('div', 'mr-warn', '⚠ 次はボス戦です'));
+  s.appendChild(el('p', 'mr-sub', 'どちらか1つだけ選べます。'));
+
+  if (node && node.restDone){
+    s.appendChild(el('div', 'mr-panel', node.restResult || '休憩を終えた。'));
+    s.appendChild(el('div', 'mr-spacer'));
+    s.appendChild(btn('マップへ戻る', 'primary', () => go('MAP')));
+    return [renderHud(), s];
+  }
+
+  const restBtn = btn('🔥 休む<br><span class="mr-note">HPを ' + heal + ' 回復(最大HPの'
+    + Math.round(d.restHealRate * 100) + '%)</span>', '', () => {
+    const before = run.hp;
+    healPlayer(heal);
+    node.restDone = true;
+    node.restResult = 'HPを' + (run.hp - before) + '回復した。(' + run.hp + '/' + run.maxHp + ')';
+    saveGame(); render();
+  });
+  s.appendChild(restBtn);
+
+  const ups = upgradableCards();
+  const upBtn = btn('⚒ 鍛える<br><span class="mr-note">'
+    + (ups.length ? 'デッキから1枚を強化(+)' : '強化できるカードがない') + '</span>', '', () => {
+    openCardPicker({
+      title: '強化するカードを選ぶ',
+      cards: ups,
+      onPick(inst){
+        inst.upgraded = true;
+        node.restDone = true;
+        node.restResult = effectiveCard(inst).name + ' に強化した。';
+        saveGame(); render();
+      },
+    });
+  });
+  upBtn.disabled = !ups.length;
+  s.appendChild(upBtn);
+
+  s.appendChild(el('div', 'mr-spacer'));
+  s.appendChild(btn('何もせず先へ進む', 'ghost', () => {
+    node.restDone = true; node.restResult = '何もせず先へ進んだ。'; saveGame(); go('MAP');
+  }));
+  return [renderHud(), s];
+}
+
+/* --- ショップ --- */
+function renderShop(){
+  const run = G.run;
+  const node = currentNode();
+  if (node && !node.shopStock){ node.shopStock = makeShopStock(); saveGame(); }
+  const stock = node ? node.shopStock : makeShopStock();
+
+  const s = el('div', 'mr-screen');
+  s.appendChild(el('h2', 'mr-title', '🏪 ショップ'));
+  const scroll = el('div', 'mr-scroll');
+
+  scroll.appendChild(el('div', 'mr-cathead', '<span>カード</span><span class="bar"></span>'));
+  const grid = el('div', 'mr-grid');
+  for (const item of stock.cards){
+    const inst = { uid:-1, id:item.id, upgraded:false };
+    const afford = run.gold >= item.price && !item.sold;
+    const node2 = renderCardEl(inst, {
+      playable: afford, disabled: !afford,
+      onClick: () => {
+        if (run.gold < item.price) return;
+        run.gold -= item.price; item.sold = true;
+        addCardToDeck(item.id, false); saveGame(); render();
+      },
+    });
+    node2.appendChild(el('div', 'cprice' + (item.sold ? ' sold' : ''),
+      item.sold ? 'SOLD' : item.price + 'G'));
+    grid.appendChild(node2);
+  }
+  scroll.appendChild(grid);
+
+  scroll.appendChild(el('div', 'mr-cathead', '<span>レリック</span><span class="bar"></span>'));
+  for (const item of stock.relics){
+    const r = RELICS[item.id];
+    const row = el('div', 'mr-panel mr-row');
+    row.appendChild(el('div', '', r.icon + ' <b>' + r.name + '</b><br><span class="mr-note">' + r.desc + '</span>'));
+    row.appendChild(el('div', 'mr-spacer'));
+    if (item.sold) row.appendChild(el('span', 'mr-badge', 'SOLD'));
+    else {
+      const bb = btn(item.price + 'G', 'small' + (run.gold >= item.price ? ' primary' : ''), () => {
+        if (run.gold < item.price) return;
+        run.gold -= item.price; item.sold = true; gainRelic(item.id); saveGame(); render();
+      });
+      bb.disabled = run.gold < item.price;
+      row.appendChild(bb);
+    }
+    scroll.appendChild(row);
+  }
+
+  scroll.appendChild(el('div', 'mr-cathead', '<span>カード除去</span><span class="bar"></span>'));
+  const rem = el('div', 'mr-panel mr-row');
+  rem.appendChild(el('div', '', 'デッキから1枚を取り除く<br><span class="mr-note">次回は '
+    + (run.removeCost + 25) + 'G に上昇</span>'));
+  rem.appendChild(el('div', 'mr-spacer'));
+  const canRemove = run.gold >= run.removeCost && run.deck.length > 1;
+  const rb = btn(run.removeCost + 'G', 'small' + (canRemove ? ' primary' : ''), () => {
+    openCardPicker({
+      title: '除去するカードを選ぶ',
+      note: run.removeCost + 'G を支払います',
+      cards: run.deck.slice(),
+      onPick(inst){
+        run.gold -= run.removeCost;
+        run.removeCost += 25;
+        removeCardFromDeck(inst);
+        saveGame(); render();
+      },
+    });
+  });
+  rb.disabled = !canRemove;
+  rem.appendChild(rb);
+  scroll.appendChild(rem);
+
+  s.appendChild(scroll);
+  const foot = el('div', 'mr-sticky');
+  foot.appendChild(btn('デッキを見る', 'ghost', () => openCardPicker({
+    title: '現在のデッキ(' + run.deck.length + '枚)', cards: run.deck.slice(),
+    filter: () => false, onPick(){},
+  })));
+  foot.appendChild(btn('立ち去る', 'primary', () => go('MAP')));
+  s.appendChild(foot);
+  return [renderHud(), s];
+}
+
+/* --- 宝箱 --- */
+function renderTreasure(){
+  const node = currentNode();
+  if (node && !node.treasure){ node.treasure = makeTreasure(); saveGame(); }
+  const t = node ? node.treasure : makeTreasure();
+
+  const s = el('div', 'mr-screen');
+  s.appendChild(el('h2', 'mr-title', '🎁 宝箱'));
+  const ph = el('div', 'mr-placeholder');
+
+  if (!t.opened){
+    ph.appendChild(el('div', 'mr-chest', '🎁'));
+    ph.appendChild(el('div', 'mr-sub', '埃をかぶった箱がある'));
+    s.appendChild(ph);
+    s.appendChild(btn('開ける', 'primary', () => {
+      t.opened = true;
+      if (t.relic) gainRelic(t.relic); else t.gold += 50;   // 全所持済ならゴールド50
+      if (t.gold) gainGold(t.gold);
+      saveGame(); render();
+    }));
+  } else {
+    ph.appendChild(el('div', 'mr-chest open', '✨'));
+    if (t.relic){
+      const r = RELICS[t.relic];
+      ph.appendChild(el('div', 'mr-title', r.icon + ' ' + r.name));
+      ph.appendChild(el('div', 'mr-sub', r.desc));
+    } else {
+      ph.appendChild(el('div', 'mr-sub', 'レリックは尽きていた'));
+    }
+    if (t.gold) ph.appendChild(el('div', '', '💰 ゴールド +' + t.gold));
+    s.appendChild(ph);
+    s.appendChild(btn('マップへ戻る', 'primary', () => go('MAP')));
+  }
+  return [renderHud(), s];
+}
+
+/* --- イベント --- */
+function renderEvent(){
+  const run = G.run;
+  const node = currentNode();
+  if (node && !node.eventId){
+    node.eventId = pickEvent();
+    if (!run.seenEvents) run.seenEvents = [];
+    if (run.seenEvents.indexOf(node.eventId) < 0) run.seenEvents.push(node.eventId);
+    saveGame();
+  }
+  const ev = EVENTS.find(e => e.id === (node ? node.eventId : null)) || EVENTS[0];
+
+  const s = el('div', 'mr-screen');
+  s.appendChild(el('h2', 'mr-title', '❓ ' + ev.title));
+  s.appendChild(el('div', 'mr-panel', ev.text));
+
+  if (node && node.eventResult != null){
+    s.appendChild(el('div', 'mr-panel mr-result', node.eventResult));
+    s.appendChild(el('div', 'mr-spacer'));
+    s.appendChild(btn('マップへ戻る', 'primary', () => go('MAP')));
+    return [renderHud(), s];
+  }
+
+  for (const ch of ev.choices){
+    const ok = ch.enabled ? ch.enabled() : true;
+    const why = ok ? '' : '<br><span class="mr-locked">条件未達: ' + (ch.why ? ch.why() : '') + '</span>';
+    const b = btn('<b>' + ch.label + '</b><br><span class="mr-note">' + ch.desc + '</span>' + why, '', () => {
+      if (ch.picker){
+        openCardPicker({
+          title: ch.picker.title,
+          cards: ch.picker.list(),
+          onPick(inst){ node.eventResult = ch.picker.done(inst); saveGame(); render(); },
+        });
+      } else {
+        node.eventResult = ch.run();
+        saveGame(); render();
+      }
+    });
+    b.disabled = !ok;
+    s.appendChild(b);
+  }
+  s.appendChild(el('div', 'mr-spacer'));
+  return [renderHud(), s];
+}
+
+/* --- 敗北 / 制覇 --- */
+const DEFEAT_MESSAGES = [
+  '倒れた回数だけ、明日の筋肉になる。',
+  '今日の運動は無駄にならない。半分は持ち帰った。',
+  'デッキが弱かったんじゃない。回数が足りなかっただけだ。',
+];
+
+function renderRunEnd(cleared){
+  const run = G.run;
+  if (!run.coresGranted){ run.coresGranted = true; grantCores(cleared); }   // 付与は1回だけ
+  const result = endRun(cleared);
+  const s = el('div', 'mr-screen');
+  const scroll = el('div', 'mr-scroll');
+
+  const head = el('div', 'mr-center');
+  head.appendChild(el('h2', 'mr-title', cleared ? '制覇!' : '敗北'));
+  head.appendChild(el('p', 'mr-sub',
+    DIFFICULTY[run.difficulty].label + ' / 到達 Row ' + Math.max(0, run.currentRow)
+    + ' / 撃破 ' + (run.kills || 0) + '体'));
+  scroll.appendChild(head);
+
+  if (!cleared){
+    scroll.appendChild(el('div', 'mr-panel mr-result', pick(DEFEAT_MESSAGES)));
+  }
+
+  // 筋力コア
+  const cp = el('div', 'mr-panel');
+  cp.appendChild(el('div', 'mr-note', '筋力コア' + (cleared ? '' : '(敗北につき50%没収)')));
+  const t = el('table', 'mr-table');
+  t.innerHTML = '<thead><tr><th>種目</th><th>換算</th><th>獲得予定</th><th>実際</th></tr></thead>';
+  const tb = el('tbody');
+  for (const r of result.rows){
+    const tr = el('tr');
+    tr.innerHTML = '<td>' + r.ex.coreLabel + '</td><td>' + r.count + '</td>'
+      + '<td' + (cleared ? '' : ' style="color:var(--dim)"') + '>' + r.full + '</td>'
+      + '<td><b>' + r.got + '</b></td>';
+    tb.appendChild(tr);
+  }
+  t.appendChild(tb);
+  cp.appendChild(t);
+  cp.appendChild(el('div', 'mr-note', '所持: '
+    + EXERCISES.map(ex => CORE_LABEL[ex.core] + ' ' + G.meta.cores[ex.core]).join(' / ')));
+  scroll.appendChild(cp);
+
+  // 最終デッキ
+  scroll.appendChild(el('div', 'mr-cathead',
+    '<span>最終デッキ ' + run.deck.length + '枚</span><span class="bar"></span>'));
+  scroll.appendChild(renderDeckList(run.deck, {}));
+  s.appendChild(scroll);
+
+  const foot = el('div', 'mr-sticky');
+  if (!cleared){
+    foot.appendChild(btn('もう一度挑む', 'primary', () => {
+      const ex = Object.assign({}, run.exercise);
+      const diff = run.difficulty;
+      G.battle = null; B = null; G.run = null;
+      G.draft = newDraft(diff);
+      G.draft.exercise = ex;
+      saveGame(); go('EXERCISE');
+    }));
+  }
+  foot.appendChild(btn('タイトルへ', cleared ? 'primary' : 'ghost', () => {
+    G.battle = null; B = null; G.run = null; saveGame(); go('TITLE');
+  }));
+  s.appendChild(foot);
+  return s;
+}
+
+/* --- マップ画面 --- */
+const MAP_ROW_H = 92;
+
+function renderMap(){
+  const run = G.run;
+  if (!run){ go('TITLE'); return el('div'); }
+  if (!run.map) run.map = generateMap(run.difficulty);
+
+  const s = el('div', 'mr-screen mr-mapscreen');
+  const selectable = selectableNodes();
+  const selSet = new Set(selectable.map(n => nodeKey(n.row, n.col)));
+  const cur = currentNode();
+
+  const head = el('div', 'mr-maphead');
+  head.innerHTML = run.currentRow < 0
+    ? '<b>出発地点を選んでください</b>'
+    : (run.currentRow >= BOSS_ROW ? '<b>ボスを撃破した</b>'
+       : 'Row ' + run.currentRow + ' / ' + (BOSS_ROW) + ' — 次に進む場所を選んでください');
+  s.appendChild(head);
+
+  const scroller = el('div', 'mr-mapscroll');
+  const wrap = el('div', 'mr-mapwrap');
+  wrap.style.height = (MAP_ROWS * MAP_ROW_H) + 'px';
+
+  const yOf = (r) => ((BOSS_ROW - r) + 0.5) * MAP_ROW_H;
+  const xOf = (c, r) => (r === BOSS_ROW ? '50%' : ((c + 0.5) / MAP_COLS * 100) + '%');
+
+  /* 辺 */
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'mr-mapedges');
+  for (let r = 0; r < BOSS_ROW; r++){
+    for (let c = 0; c < MAP_COLS; c++){
+      const n = run.map.rows[r][c];
+      if (!n) continue;
+      for (const nc of n.next){
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', xOf(c, r));      line.setAttribute('y1', yOf(r));
+        line.setAttribute('x2', xOf(nc, r + 1)); line.setAttribute('y2', yOf(r + 1));
+        const active = cur && cur.row === r && cur.col === c && selSet.has(nodeKey(r + 1, nc));
+        line.setAttribute('class', 'edge' + (active ? ' active' : ''));
+        svg.appendChild(line);
+      }
+    }
+  }
+  wrap.appendChild(svg);
+
+  /* ノード */
+  for (let r = 0; r <= BOSS_ROW; r++){
+    for (let c = 0; c < MAP_COLS; c++){
+      const n = run.map.rows[r][c];
+      if (!n) continue;
+      const key = nodeKey(r, c);
+      const isCur = cur === n;
+      const isSel = selSet.has(key);
+      const visited = run.visited.indexOf(key) >= 0;
+      const node = el('div', 'mr-node t-' + n.type
+        + (isSel ? ' selectable' : '') + (isCur ? ' current' : '') + (visited ? ' visited' : ''));
+      node.style.left = xOf(c, r);
+      node.style.top  = (yOf(r) - 23) + 'px';
+      node.appendChild(el('span', 'icon', NODE_ICON[n.type]));
+      if (visited && !isCur) node.appendChild(el('span', 'check', '✓'));
+      const label = el('div', 'nlabel', NODE_LABEL[n.type]);
+      node.appendChild(label);
+      if (isSel) node.addEventListener('click', () => enterNode(n));
+      wrap.appendChild(node);
+    }
+  }
+
+  scroller.appendChild(wrap);
+  s.appendChild(scroller);
+
+  /* 凡例 */
+  const legend = el('div', 'mr-legend');
+  for (const t of ['COMBAT','ELITE','EVENT','REST','SHOP','TREASURE','BOSS'])
+    legend.appendChild(el('span', '', NODE_ICON[t] + ' ' + NODE_LABEL[t]));
+  s.appendChild(legend);
+
+  // 現在地までスクロール(最初は一番下=Row0)
+  setTimeout(() => {
+    const target = run.currentRow < 0 ? MAP_ROWS * MAP_ROW_H
+                 : (BOSS_ROW - run.currentRow + 1.5) * MAP_ROW_H;
+    scroller.scrollTop = Math.max(0, target - scroller.clientHeight);
+  }, 0);
+
+  return [renderHud(), s];
+}
+
+/* --- 強化所 --- */
+let metaTab = 'cards';
+
+function renderMeta(){
+  const s = el('div', 'mr-screen');
+  s.appendChild(el('h2', 'mr-title', '強化所'));
+  s.appendChild(renderCores(G.meta.cores));
+
+  const tabs = el('div', 'mr-tabs');
+  const defs = [
+    ['cards',   'カード開放'],
+    ['basics',  '初期デッキ'],
+    ['relics',  'レリック'],
+    ['diff',    '難易度'],
+  ];
+  for (const [key, label] of defs){
+    const t = el('button', 'mr-tab' + (metaTab === key ? ' on' : ''), label);
+    t.addEventListener('click', () => { metaTab = key; render(); });
+    tabs.appendChild(t);
+  }
+  s.appendChild(tabs);
+
+  const scroll = el('div', 'mr-scroll');
+  if (metaTab === 'cards')  renderMetaCards(scroll);
+  if (metaTab === 'basics') renderMetaBasics(scroll);
+  if (metaTab === 'relics') renderMetaRelics(scroll);
+  if (metaTab === 'diff')   renderMetaDifficulty(scroll);
+  s.appendChild(scroll);
+
+  const foot = el('div', 'mr-sticky');
+  foot.appendChild(btn('タイトルへ戻る', 'primary', () => go('TITLE')));
+  if (DEBUG) foot.appendChild(btn('メタ進行をリセット(デバッグ)', 'ghost', () => {
+    if (!confirm('永続進行を全て消しますか?')) return;
+    G.meta = newMeta(); saveGame(); render();
+  }));
+  s.appendChild(foot);
+  return s;
+}
+
+function buyRow(label, sub, costText, canBuy, owned, onBuy){
+  const row = el('div', 'mr-panel mr-row' + (owned ? ' owned' : ''));
+  row.appendChild(el('div', 'mr-grow', label + (sub ? '<br><span class="mr-note">' + sub + '</span>' : '')));
+  if (owned){
+    row.appendChild(el('span', 'mr-badge', '開放済'));
+  } else {
+    const b = btn(costText, 'small' + (canBuy ? ' primary' : ''), () => {
+      if (!canBuy) return;
+      if (!confirm(costText + ' を支払います。取り消しはできません。よろしいですか?')) return;
+      onBuy(); render();
+    });
+    b.disabled = !canBuy;
+    row.appendChild(b);
+  }
+  return row;
+}
+
+function renderMetaCards(scroll){
+  scroll.appendChild(el('div', 'mr-note',
+    'UNCOMMON / RARE のカードは、開放するまでデッキ生成にも報酬にもショップにも出ません。'
+    + 'COMMON と基本カードは最初から使えます。'));
+  for (const cat of CATEGORIES){
+    const coreKey = CAT_CORE[cat];
+    const head = el('div', 'mr-cathead ' + cat);
+    head.innerHTML = '<span>' + CAT_NAME[cat] + '(' + CAT_LABEL[cat] + ') — '
+      + CORE_LABEL[coreKey] + ' ' + G.meta.cores[coreKey] + '</span><span class="bar"></span>';
+    scroll.appendChild(head);
+    for (const c of CARD_LIST){
+      if (c.cat !== cat || !UNLOCK_COST[c.rarity]) continue;
+      const cost = UNLOCK_COST[c.rarity];
+      const owned = G.meta.unlocked.indexOf(c.id) >= 0;
+      const can = haveCore(coreKey, cost);
+      scroll.appendChild(buyRow(
+        '<b>' + c.name + '</b> <span class="mr-badge">' + RARITY_LABEL[c.rarity] + '</span>',
+        'コスト' + c.cost + ' / ' + cardDisplayText({ uid:-1, id:c.id, upgraded:false }, null),
+        CORE_LABEL[coreKey] + ' ' + cost, can, owned,
+        () => unlockCard(c.id)));
+    }
+  }
+}
+
+function renderMetaBasics(scroll){
+  scroll.appendChild(el('div', 'mr-note',
+    '初期デッキの基本カードを、以降の全てのランで恒久的に強化(+)版に差し替えます。'));
+  for (const id of upgradableBasics()){
+    const c = CARDS[id];
+    const coreKey = CAT_CORE[c.cat];
+    const owned = G.meta.upgradedBasics.indexOf(id) >= 0;
+    const can = haveCore(coreKey, UPGRADE_BASIC_COST);
+    const n = STARTING_DECK.filter(x => x === id).length;
+    scroll.appendChild(buyRow(
+      '<b>' + c.name + '</b> ×' + n,
+      cardDisplayText({ uid:-1, id:id, upgraded:false }, null)
+        + ' → <span style="color:var(--rare)">' + cardDisplayText({ uid:-1, id:id, upgraded:true }, null) + '</span>',
+      CORE_LABEL[coreKey] + ' ' + UPGRADE_BASIC_COST, can, owned,
+      () => upgradeBasic(id)));
+  }
+}
+
+function renderMetaRelics(scroll){
+  scroll.appendChild(el('div', 'mr-note',
+    '開放したレリックが宝箱・ショップ・エリート報酬に出現するようになります。'
+    + 'コストはどのコアからでも支払えます(合計 ' + totalCores() + ' 個所持)。'));
+  for (const r of RELIC_LIST){
+    const starter = STARTER_RELICS.indexOf(r.id) >= 0;
+    const owned = starter || G.meta.unlockedRelics.indexOf(r.id) >= 0;
+    scroll.appendChild(buyRow(
+      r.icon + ' <b>' + r.name + '</b>' + (starter ? ' <span class="mr-badge">初期</span>' : ''),
+      r.desc,
+      '任意のコア ' + RELIC_UNLOCK_COST, totalCores() >= RELIC_UNLOCK_COST, owned,
+      () => unlockRelic(r.id)));
+  }
+}
+
+function renderMetaDifficulty(scroll){
+  const rows = [
+    ['🟦 ふつう', '最初から遊べます', true, ''],
+    ['🔥 むずい', DIFFICULTY.HARD.label + ' — 敵HP・攻撃力 ×1.25 ほか。報酬 ×1.2',
+     hardUnlocked(), '「ふつう」を1回クリアすると解放'],
+  ];
+  for (const [name, desc, open, cond] of rows){
+    const row = el('div', 'mr-panel');
+    row.innerHTML = '<b>' + (open ? name : '🔒 ' + name.replace(/^\S+\s/, '')) + '</b>'
+      + '<br><span class="mr-note">' + desc + '</span>'
+      + (open ? '' : '<br><span class="mr-locked">' + cond + '</span>');
+    scroll.appendChild(row);
+  }
+  const st = el('div', 'mr-panel');
+  st.innerHTML = '<div class="mr-note">実績</div>'
+    + 'ふつう クリア: <b>' + (G.meta.clearedNormal ? '達成' : '未達成') + '</b><br>'
+    + 'むずい クリア: <b>' + (G.meta.clearedHard ? '達成' : '未達成') + '</b>'
+    + (G.meta.lastPlayDate ? '<br><span class="mr-note">最終プレイ: ' + G.meta.lastPlayDate + '</span>' : '');
+  scroll.appendChild(st);
+}
+
+const RENDERERS = {
+  TITLE: renderTitle,
+  DIFFICULTY: renderDifficulty,
+  EXERCISE: renderExercise,
+  DECK_PREVIEW: renderDeckPreview,
+  MAP: renderMap,
+  BATTLE: renderBattle,
+  REWARD:   renderReward,
+  VICTORY:  function(){ return renderRunEnd(true); },
+  GAMEOVER: function(){ return renderRunEnd(false); },
+  SHOP:     renderShop,
+  REST:     renderRest,
+  EVENT:    renderEvent,
+  TREASURE: renderTreasure,
+  META:     renderMeta,
+};
+
+// 画面と描画関数の対応漏れを起動時に検出する
+for (const k in RENDERERS){
+  if (SCREENS.indexOf(k) < 0) throw new Error('RENDERERS に未知の画面: ' + k);
+  if (typeof RENDERERS[k] !== 'function') throw new Error('RENDERERS[' + k + '] が関数でない');
+}
+
+/* --- デバッグパネル --- */
+function renderDebugPanel(){
+  const p = el('div', 'mr-debug');
+  p.appendChild(el('div', 't', 'DEBUG'));
+  const sel = el('select');
+  sel.style.cssText = 'font:inherit;font-size:12px;background:#1e222c;color:#e8ecf2;border:1px solid #444;border-radius:5px;padding:3px';
+  for (const s of SCREENS){
+    const o = el('option'); o.value = s; o.textContent = s;
+    if (s === G.screen) o.selected = true;
+    sel.appendChild(o);
+  }
+  sel.addEventListener('change', () => go(sel.value));
+  p.appendChild(sel);
+  p.appendChild(btn('ダミーrun生成', 'small', () => {
+    G.run = makeDummyRun();
+    saveGame(); render();
+  }));
+  p.appendChild(btn('セーブ削除', 'small', () => { resetSave(); render(); }));
+  if (G.battle && G.battle.phase === 'PLAYER'){
+    p.appendChild(el('div', 't', 'BATTLE'));
+    p.appendChild(btn('敵HP1', 'small', () => {
+      for (const e of G.battle.enemies) if (e.alive) e.hp = 1;
+      render();
+    }));
+    p.appendChild(btn('Energy+10', 'small', () => { G.battle.energy += 10; render(); }));
+    p.appendChild(btn('1枚引く', 'small', () => { drawCard(1); render(); }));
+    p.appendChild(btn('勝利', 'small', () => {
+      for (const e of G.battle.enemies){ e.hp = 0; e.alive = false; }
+      checkBattleEnd(); render();
+    }));
+    p.appendChild(btn('手札を全部強化', 'small', () => {
+      for (const c of G.battle.hand) c.upgraded = true;
+      render();
+    }));
+    const cs = el('select');
+    cs.style.cssText = 'font:inherit;font-size:11px;background:#1e222c;color:#e8ecf2;border:1px solid #444;border-radius:5px;padding:3px;max-width:100%';
+    const o0 = el('option'); o0.value = ''; o0.textContent = '手札に加える…'; cs.appendChild(o0);
+    for (const c of CARD_LIST){
+      const o = el('option'); o.value = c.id; o.textContent = CAT_LABEL[c.cat] + ' ' + c.name;
+      cs.appendChild(o);
+    }
+    cs.addEventListener('change', () => {
+      if (!cs.value) return;
+      G.battle.hand.push(newCardInstance(cs.value, false));
+      cs.value = ''; render();
+    });
+    p.appendChild(cs);
+  }
+  return p;
+}
+
+function makeDummyRun(){
+  const d = DIFFICULTY.NORMAL;
+  return {
+    difficulty: 'NORMAL',
+    hp: d.playerMaxHp, maxHp: d.playerMaxHp, gold: 99,
+    deck: STARTING_DECK.map(id => newCardInstance(id, false)),
+    relics: [], map: null, currentRow: -1, currentCol: null, visited: [],
+    exercise: { pushup:0, jumpSquat:0, twistLegRaise:0, plankSeconds:0 },
+    seenEvents: [], removeCost: 75
+  };
+}
+
+
+/* ===== SECTION: BOOT ===== */
+function boot(){
+  loadGame();
+  // 復元した run のカード uid と採番カウンタが衝突しないようにする
+  if (G.run && Array.isArray(G.run.deck)){
+    for (const c of G.run.deck) if (c && c.uid >= _uid) _uid = c.uid + 1;
+  }
+  render();
+}
+boot();
+
+/* 開発用にグローバル公開(デバッグコンソールから触れるように) */
+window.MROG = { G, CARDS, CARD_LIST, ENEMIES, RELICS, DIFFICULTY, NODE_WEIGHTS,
+  saveGame, loadGame, resetSave, go, render, effectiveCard,
+  normalizeExercise, toCount, cardsFromCount, coresFromCount, coresGained,
+  rollRarity, rollCardOf, buildDeck, startRun, newDraft, rarityWeights, upgradeBonus,
+  handSizeFor, handSize, rarityBonus, BASE_HAND_SIZE,
+  startBattle, playCard, endPlayerTurn, drawCard, calcDamage, gainBlock,
+  cardDisplayText, effectText, resolveEffect, decideIntent, checkBattleEnd,
+  ENCOUNTERS, pickEncounter, syncPhase, phaseIndexFor, phaseThreshold, intentText,
+  generateMap, validateMap, mapProblems, mapNodes, selectableNodes, enterNode, currentNode,
+  MAP_ROWS, MAP_COLS, BOSS_ROW,
+  makeReward, pickRewardCards, makeShopStock, makeTreasure, EVENTS, pickEvent,
+  endRun, relicPool, availableRelics, rollRelic, gainRelic, upgradableCards, PRICE,
+  fireRelicHook, cardCost, RELIC_LIST,
+  isUnlocked, unlockCard, upgradeBasic, unlockRelic, grantCores, hardUnlocked,
+  UNLOCK_COST, UPGRADE_BASIC_COST, RELIC_UNLOCK_COST, upgradableBasics, CAT_CORE, totalCores,
+  motionOn, showSettings, canPlay, livingEnemies, startPlayerTurn,
+  dealDamageToEnemy, actEnemy, dealDamageToPlayer, flushPopups,
+  get battle(){ return G.battle; } };
+</script>
