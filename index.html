@@ -207,6 +207,38 @@ body{
 }
 .mr-hand .mr-card{width:98px;min-height:142px}
 .mr-card.selected{outline:2px solid var(--energy);outline-offset:2px;transform:translateY(-6px)}
+
+/* マップ */
+.mr-mapscreen{padding:10px;gap:8px}
+.mr-maphead{font-size:12.5px;color:var(--dim);text-align:center}
+.mr-mapscroll{flex:1;min-height:0;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:#10131a}
+.mr-mapwrap{position:relative;width:100%}
+.mr-mapedges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.mr-mapedges .edge{stroke:#2c3342;stroke-width:2;stroke-dasharray:4 4}
+.mr-mapedges .edge.active{stroke:#6f8fb8;stroke-width:2.5;stroke-dasharray:none}
+.mr-node{
+  position:absolute;transform:translateX(-50%);width:46px;
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+}
+.mr-node .icon{
+  width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:19px;background:#1a1e27;border:2px solid #2c3342;color:#5f6878;
+  transition:transform .12s,box-shadow .12s;
+}
+.mr-node .nlabel{font-size:9px;color:#5a6474;white-space:nowrap;background:#10131a;padding:0 4px;border-radius:3px}
+.mr-node .check{position:absolute;top:-2px;right:-2px;font-size:12px;color:#5fa87a}
+.mr-node.visited .icon{border-color:#3a4453;color:#8b93a5;background:#20252f}
+.mr-node.current .icon{border-color:var(--text);color:var(--text);box-shadow:0 0 0 3px rgba(232,236,242,.15)}
+.mr-node.selectable{cursor:pointer}
+.mr-node.selectable .icon{color:#fff;background:#26303f;border-color:#7fb6e6;box-shadow:0 0 14px rgba(127,182,230,.45)}
+.mr-node.selectable .nlabel{color:#9fb4cc}
+.mr-node.selectable:hover .icon{transform:scale(1.12)}
+.mr-node.selectable.t-ELITE .icon{border-color:#e0904a;box-shadow:0 0 14px rgba(224,144,74,.45)}
+.mr-node.selectable.t-REST  .icon{border-color:#6fc48d;box-shadow:0 0 14px rgba(111,196,141,.45)}
+.mr-node.selectable.t-SHOP  .icon{border-color:#e8c34a;box-shadow:0 0 14px rgba(232,195,74,.4)}
+.mr-node.t-BOSS .icon{width:52px;height:52px;font-size:23px}
+.mr-node.selectable.t-BOSS .icon{border-color:#e2574c;box-shadow:0 0 18px rgba(226,87,76,.5)}
+.mr-legend{display:flex;flex-wrap:wrap;gap:6px 10px;justify-content:center;font-size:10.5px;color:var(--dim)}
 .mr-debug .t{font-size:10px;color:#c88;letter-spacing:.08em}
 </style>
 </head>
@@ -779,7 +811,7 @@ function startRun(draft){
     hp: d.playerMaxHp, maxHp: d.playerMaxHp, gold: 99,
     deck: draft.deck,
     relics: [],
-    map: null, currentRow: -1, currentCol: null, visited: [],
+    map: generateMap(draft.difficulty), currentRow: -1, currentCol: null, visited: [],
     exercise: Object.assign({}, draft.exercise),
     seenEvents: [], removeCost: 75
   };
@@ -787,6 +819,244 @@ function startRun(draft){
   saveGame();
 }
 
+
+/* ===== SECTION: MAP ===== */
+const MAP_ROWS = 7;
+const MAP_COLS = 4;
+const BOSS_ROW = MAP_ROWS - 1;
+const NODE_ICON = {
+  COMBAT:'⚔', ELITE:'👹', EVENT:'❓', REST:'🔥', SHOP:'🏪', TREASURE:'🎁', BOSS:'💀',
+};
+const NODE_LABEL = {
+  COMBAT:'戦闘', ELITE:'エリート', EVENT:'イベント', REST:'休憩',
+  SHOP:'ショップ', TREASURE:'宝箱', BOSS:'ボス',
+};
+
+function nodeKey(r, c){ return r + '_' + c; }
+
+/** 7行×最大4列の分岐マップを生成する */
+function generateMap(diffKey){
+  for (let attempt = 0; attempt < 40; attempt++){
+    const map = buildMapGraph();
+    assignNodeTypes(map, diffKey);
+    ensureConstraints(map);
+    assignEnemyGroups(map);
+    if (validateMap(map)) return map;
+  }
+  // ここに来ることは実質ないが、最後の1回は制約補正済みのものを返す
+  const map = buildMapGraph();
+  assignNodeTypes(map, diffKey);
+  ensureConstraints(map);
+  assignEnemyGroups(map);
+  return map;
+}
+
+/** パスを6本引いてノードと辺を確定する */
+function buildMapGraph(){
+  const rows = [];
+  for (let r = 0; r < MAP_ROWS; r++) rows.push(new Array(MAP_COLS).fill(null));
+
+  const ensure = (r, c) => {
+    if (!rows[r][c]) rows[r][c] = { row:r, col:c, type:null, next:[], prev:[], enemyGroup:null };
+    return rows[r][c];
+  };
+  const link = (a, b) => {
+    if (a.next.indexOf(b.col) < 0) a.next.push(b.col);
+    if (b.prev.indexOf(a.col) < 0) b.prev.push(a.col);
+  };
+
+  // Row0 のスタート地点は2〜3箇所
+  const startCols = shuffle([0,1,2,3]).slice(0, range(2,3)).sort((x,y) => x-y);
+  for (const c of startCols) ensure(0, c);
+
+  // Row0 → Row5 まで6本のパスを引く
+  for (let i = 0; i < 6; i++){
+    let c = startCols[i % startCols.length];
+    for (let r = 0; r < BOSS_ROW - 1; r++){
+      const from = ensure(r, c);
+      const cands = [c - 1, c, c + 1].filter(x => x >= 0 && x < MAP_COLS);
+      const nc = pick(cands);
+      link(from, ensure(r + 1, nc));
+      c = nc;
+    }
+  }
+
+  // Row5 の全ノードを Row6 のボスへ収束させる
+  const boss = ensure(BOSS_ROW, 0);
+  boss.type = 'BOSS';
+  for (let c = 0; c < MAP_COLS; c++){
+    if (rows[BOSS_ROW - 1][c]) link(rows[BOSS_ROW - 1][c], boss);
+  }
+  return { rows: rows };
+}
+
+function mapNodes(map, fromRow, toRow){
+  const out = [];
+  for (let r = fromRow; r <= toRow; r++)
+    for (let c = 0; c < MAP_COLS; c++) if (map.rows[r][c]) out.push(map.rows[r][c]);
+  return out;
+}
+function parentsOf(map, node){
+  if (node.row === 0) return [];
+  return node.prev.map(c => map.rows[node.row - 1][c]).filter(Boolean);
+}
+
+function assignNodeTypes(map, diffKey){
+  for (let c = 0; c < MAP_COLS; c++) if (map.rows[0][c]) map.rows[0][c].type = 'COMBAT';
+  const weights = NODE_WEIGHTS[diffKey] || NODE_WEIGHTS.NORMAL;
+  for (const n of mapNodes(map, 1, BOSS_ROW - 1)) n.type = weightedPick(weights);
+}
+
+/** 生成後の制約補正 */
+function ensureConstraints(map){
+  const last = BOSS_ROW - 1;   // = Row5
+
+  // Row1 は ELITE / REST 禁止
+  for (const n of mapNodes(map, 1, 1))
+    if (n.type === 'ELITE' || n.type === 'REST') n.type = 'COMBAT';
+
+  // ELITE はラン中1〜2個
+  let elites = mapNodes(map, 2, last).filter(n => n.type === 'ELITE');
+  if (elites.length === 0){
+    const cands = mapNodes(map, 3, 4).filter(n => n.type === 'COMBAT');
+    const pool = cands.length ? cands : mapNodes(map, 2, last);
+    if (pool.length) pick(pool).type = 'ELITE';
+  } else if (elites.length > 2){
+    for (const n of shuffle(elites).slice(2)) n.type = 'COMBAT';
+  }
+
+  // SHOP はラン中1個以上
+  if (!mapNodes(map, 1, last).some(n => n.type === 'SHOP')){
+    const pool = mapNodes(map, 3, 3).filter(n => n.type !== 'ELITE');
+    const alt  = mapNodes(map, 2, last).filter(n => n.type !== 'ELITE');
+    const target = pool.length ? pool : alt;
+    if (target.length) pick(target).type = 'SHOP';
+  }
+
+  // REST は連続禁止(親が REST なら EVENT に置換)
+  for (let r = 2; r <= last; r++)
+    for (const n of mapNodes(map, r, r))
+      if (n.type === 'REST' && parentsOf(map, n).some(p => p.type === 'REST')) n.type = 'EVENT';
+
+  // EVENT は連続2回まで(3連続になる経路の3つ目を COMBAT に)
+  for (let r = 3; r <= last; r++){
+    for (const n of mapNodes(map, r, r)){
+      if (n.type !== 'EVENT') continue;
+      const three = parentsOf(map, n).some(p =>
+        p.type === 'EVENT' && parentsOf(map, p).some(g => g.type === 'EVENT'));
+      if (three) n.type = 'COMBAT';
+    }
+  }
+
+  // ボス直前(Row5)に REST を最低1つ保証
+  if (!mapNodes(map, last, last).some(n => n.type === 'REST')){
+    const all = mapNodes(map, last, last);
+    // できるだけ親が REST でないノードを選ぶ(連続禁止を壊さないため)
+    const safe = all.filter(n => !parentsOf(map, n).some(p => p.type === 'REST'));
+    const target = safe.length ? safe : all;
+    if (target.length) pick(target).type = 'REST';
+  }
+}
+
+/** 戦闘ノードの敵編成を生成時に確定させる(リロードで変わらないように) */
+function assignEnemyGroups(map){
+  let lastKey = null;
+  const assign = (n, poolKey) => {
+    const g = pickEncounter(poolKey, lastKey);
+    lastKey = g.join(',');
+    n.enemyGroup = g;
+  };
+  for (let r = 0; r <= BOSS_ROW; r++){
+    for (const n of mapNodes(map, r, r)){
+      if (n.type === 'COMBAT'){
+        assign(n, r <= 2 ? 'COMBAT_EARLY' : (r <= 4 ? 'COMBAT_MID' : 'COMBAT_LATE'));
+      } else if (n.type === 'ELITE'){
+        assign(n, 'ELITE');
+      } else if (n.type === 'BOSS'){
+        assign(n, 'BOSS');
+      }
+    }
+  }
+}
+
+/** 制約を満たしているか(テストとリトライ判定に使う) */
+function validateMap(map){
+  const last = BOSS_ROW - 1;
+  const errs = mapProblems(map);
+  return errs.length === 0;
+}
+
+function mapProblems(map){
+  const last = BOSS_ROW - 1;
+  const errs = [];
+  // Row0 → Row6 の経路が存在するか
+  let reach = new Set();
+  for (let c = 0; c < MAP_COLS; c++) if (map.rows[0][c]) reach.add(c);
+  if (!reach.size) errs.push('Row0にノードがない');
+  for (let r = 0; r < BOSS_ROW; r++){
+    const nx = new Set();
+    for (const c of reach) if (map.rows[r][c]) for (const n of map.rows[r][c].next) nx.add(n);
+    reach = nx;
+    if (!reach.size){ errs.push('Row' + (r + 1) + 'へ到達できない'); break; }
+  }
+  // 孤立ノード
+  for (const n of mapNodes(map, 1, BOSS_ROW))
+    if (!n.prev.length) errs.push('孤立ノード ' + nodeKey(n.row, n.col));
+  for (const n of mapNodes(map, 0, BOSS_ROW - 1))
+    if (!n.next.length) errs.push('行き止まり ' + nodeKey(n.row, n.col));
+
+  const nodes = mapNodes(map, 1, last);
+  const cnt = t => nodes.filter(n => n.type === t).length;
+  if (cnt('ELITE') < 1 || cnt('ELITE') > 2) errs.push('ELITE数 ' + cnt('ELITE'));
+  if (cnt('SHOP') < 1) errs.push('SHOPがない');
+  if (!mapNodes(map, last, last).some(n => n.type === 'REST')) errs.push('Row5にRESTがない');
+  for (const n of mapNodes(map, 1, 1))
+    if (n.type === 'ELITE' || n.type === 'REST') errs.push('Row1に' + n.type);
+  for (const n of nodes)
+    if (n.type === 'REST' && parentsOf(map, n).some(p => p.type === 'REST')) errs.push('RESTが連続');
+  for (const n of nodes){
+    if (n.type !== 'EVENT') continue;
+    if (parentsOf(map, n).some(p => p.type === 'EVENT'
+        && parentsOf(map, p).some(g => g.type === 'EVENT'))) errs.push('EVENTが3連続');
+  }
+  for (const n of mapNodes(map, 0, BOSS_ROW))
+    if ((n.type === 'COMBAT' || n.type === 'ELITE' || n.type === 'BOSS') && !n.enemyGroup)
+      errs.push('敵編成なし ' + nodeKey(n.row, n.col));
+  return errs;
+}
+
+/* --- 進行 --- */
+
+/** 現在地から選べるノードの一覧 */
+function selectableNodes(){
+  const run = G.run;
+  if (!run || !run.map) return [];
+  if (run.currentRow < 0) return mapNodes(run.map, 0, 0);
+  if (run.currentRow >= BOSS_ROW) return [];
+  const cur = run.map.rows[run.currentRow][run.currentCol];
+  if (!cur) return [];
+  return cur.next.map(c => run.map.rows[run.currentRow + 1][c]).filter(Boolean);
+}
+
+function enterNode(node){
+  const run = G.run;
+  run.currentRow = node.row;
+  run.currentCol = node.col;
+  if (run.visited.indexOf(nodeKey(node.row, node.col)) < 0)
+    run.visited.push(nodeKey(node.row, node.col));
+  saveGame();
+  if (node.type === 'COMBAT' || node.type === 'ELITE' || node.type === 'BOSS'){
+    startBattle(node.enemyGroup);
+  } else {
+    go(node.type);
+  }
+}
+
+function currentNode(){
+  const run = G.run;
+  if (!run || !run.map || run.currentRow < 0) return null;
+  return run.map.rows[run.currentRow][run.currentCol] || null;
+}
 
 /* ===== SECTION: BATTLE ===== */
 const MAX_HAND = 10;
@@ -1356,7 +1626,10 @@ function checkBattleEnd(){
   if (!livingEnemies().length){
     B.phase = 'WIN';
     log('戦闘に勝利した!');
-    setTimeout(() => { go('REWARD'); }, 400);
+    const node = currentNode();
+    const boss = node && node.type === 'BOSS';
+    if (boss) G.meta[G.run.difficulty === 'HARD' ? 'clearedHard' : 'clearedNormal'] = true;
+    setTimeout(() => { go(boss ? 'VICTORY' : 'REWARD'); }, 400);
     return true;
   }
   return false;
@@ -1466,7 +1739,7 @@ function renderTitle(){
 
   s.appendChild(el('div', 'mr-spacer'));
   const foot = el('div', 'mr-note mr-center');
-  foot.innerHTML = 'Phase 4 — 敵AI・エリート・ボス<br>'
+  foot.innerHTML = 'Phase 5 — 分岐マップ<br>'
     + 'カード ' + Object.keys(CARDS).length + '種 / 敵 ' + Object.keys(ENEMIES).length + '種 / レリック '
     + Object.keys(RELICS).length + '種';
   s.appendChild(foot);
@@ -1909,18 +2182,29 @@ function onHandCardClick(i){
 }
 
 /* --- 戦闘後の暫定画面(Phase 6 で本実装) --- */
-function renderBattleResult(win){
+function renderBattleResult(kind){
+  const node = currentNode();
   const s = el('div', 'mr-screen');
   const ph = el('div', 'mr-placeholder');
-  ph.appendChild(el('div', 'mr-title', win ? '戦闘に勝利' : '敗北'));
-  ph.appendChild(el('div', 'mr-sub', win ? '報酬画面は Phase 6 で実装' : 'Phase 6 で実装'));
+  if (kind === 'REWARD'){
+    ph.appendChild(el('div', 'mr-title', '戦闘に勝利'));
+    ph.appendChild(el('div', 'mr-sub', '報酬画面は Phase 6 で実装'));
+  } else if (kind === 'VICTORY'){
+    ph.appendChild(el('div', 'mr-title', '制覇!'));
+    ph.appendChild(el('div', 'mr-sub', DIFFICULTY[G.run.difficulty].label + ' をクリアした'));
+  } else {
+    ph.appendChild(el('div', 'mr-title', '敗北'));
+    ph.appendChild(el('div', 'mr-sub', 'Phase 6 で実装'));
+  }
   if (G.battle){
     ph.appendChild(el('div', 'mr-note',
       'ターン ' + G.battle.turn + ' / 残HP ' + G.run.hp + '/' + G.run.maxHp));
   }
   s.appendChild(ph);
-  if (win){
-    s.appendChild(btn('マップへ戻る', 'primary', () => { G.battle = null; B = null; saveGame(); go('MAP'); }));
+  if (kind === 'REWARD'){
+    s.appendChild(btn('マップへ戻る', 'primary', () => {
+      G.battle = null; B = null; saveGame(); go('MAP');
+    }));
   } else {
     s.appendChild(btn('タイトルへ', 'primary', () => {
       G.battle = null; B = null; G.run = null; saveGame(); go('TITLE');
@@ -1929,22 +2213,102 @@ function renderBattleResult(win){
   return s;
 }
 
-/* --- マップ(Phase 5 で本実装。今はテスト戦闘の入口) --- */
-function renderMapTemp(){
+/* --- 非戦闘ノードの暫定画面(Phase 6 で本実装) --- */
+function renderNodePlaceholder(){
+  const info = PLACEHOLDER_INFO[G.screen] || [G.screen, ''];
   const s = el('div', 'mr-screen');
   const ph = el('div', 'mr-placeholder');
-  ph.appendChild(el('div', 'mr-title', 'マップ'));
-  ph.appendChild(el('div', 'mr-sub', 'Phase 5 で実装'));
+  ph.appendChild(el('div', 'mr-title', info[0]));
+  ph.appendChild(el('div', 'mr-sub', info[1]));
   s.appendChild(ph);
-  const groups = [
-    ['通常(前半)', 'COMBAT_EARLY'], ['通常(中盤)', 'COMBAT_MID'],
-    ['通常(終盤)', 'COMBAT_LATE'], ['エリート', 'ELITE'], ['ボス', 'BOSS'],
-  ];
-  for (const [label, key] of groups){
-    s.appendChild(btn('テスト戦闘: ' + label, key === 'COMBAT_EARLY' ? 'primary' : '',
-      () => startBattle(pickEncounter(key, null))));
+  s.appendChild(btn('マップへ戻る', 'primary', () => go('MAP')));
+  return [renderHud(), s];
+}
+
+/* --- マップ画面 --- */
+const MAP_ROW_H = 92;
+
+function renderMap(){
+  const run = G.run;
+  if (!run){ go('TITLE'); return el('div'); }
+  if (!run.map) run.map = generateMap(run.difficulty);
+
+  const s = el('div', 'mr-screen mr-mapscreen');
+  const selectable = selectableNodes();
+  const selSet = new Set(selectable.map(n => nodeKey(n.row, n.col)));
+  const cur = currentNode();
+
+  const head = el('div', 'mr-maphead');
+  head.innerHTML = run.currentRow < 0
+    ? '<b>出発地点を選んでください</b>'
+    : (run.currentRow >= BOSS_ROW ? '<b>ボスを撃破した</b>'
+       : 'Row ' + run.currentRow + ' / ' + (BOSS_ROW) + ' — 次に進む場所を選んでください');
+  s.appendChild(head);
+
+  const scroller = el('div', 'mr-mapscroll');
+  const wrap = el('div', 'mr-mapwrap');
+  wrap.style.height = (MAP_ROWS * MAP_ROW_H) + 'px';
+
+  const yOf = (r) => ((BOSS_ROW - r) + 0.5) * MAP_ROW_H;
+  const xOf = (c, r) => (r === BOSS_ROW ? '50%' : ((c + 0.5) / MAP_COLS * 100) + '%');
+
+  /* 辺 */
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'mr-mapedges');
+  for (let r = 0; r < BOSS_ROW; r++){
+    for (let c = 0; c < MAP_COLS; c++){
+      const n = run.map.rows[r][c];
+      if (!n) continue;
+      for (const nc of n.next){
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', xOf(c, r));      line.setAttribute('y1', yOf(r));
+        line.setAttribute('x2', xOf(nc, r + 1)); line.setAttribute('y2', yOf(r + 1));
+        const active = cur && cur.row === r && cur.col === c && selSet.has(nodeKey(r + 1, nc));
+        line.setAttribute('class', 'edge' + (active ? ' active' : ''));
+        svg.appendChild(line);
+      }
+    }
   }
-  s.appendChild(btn('タイトルへ戻る', 'ghost', () => go('TITLE')));
+  wrap.appendChild(svg);
+
+  /* ノード */
+  for (let r = 0; r <= BOSS_ROW; r++){
+    for (let c = 0; c < MAP_COLS; c++){
+      const n = run.map.rows[r][c];
+      if (!n) continue;
+      const key = nodeKey(r, c);
+      const isCur = cur === n;
+      const isSel = selSet.has(key);
+      const visited = run.visited.indexOf(key) >= 0;
+      const node = el('div', 'mr-node t-' + n.type
+        + (isSel ? ' selectable' : '') + (isCur ? ' current' : '') + (visited ? ' visited' : ''));
+      node.style.left = xOf(c, r);
+      node.style.top  = (yOf(r) - 23) + 'px';
+      node.appendChild(el('span', 'icon', NODE_ICON[n.type]));
+      if (visited && !isCur) node.appendChild(el('span', 'check', '✓'));
+      const label = el('div', 'nlabel', NODE_LABEL[n.type]);
+      node.appendChild(label);
+      if (isSel) node.addEventListener('click', () => enterNode(n));
+      wrap.appendChild(node);
+    }
+  }
+
+  scroller.appendChild(wrap);
+  s.appendChild(scroller);
+
+  /* 凡例 */
+  const legend = el('div', 'mr-legend');
+  for (const t of ['COMBAT','ELITE','EVENT','REST','SHOP','TREASURE','BOSS'])
+    legend.appendChild(el('span', '', NODE_ICON[t] + ' ' + NODE_LABEL[t]));
+  s.appendChild(legend);
+
+  // 現在地までスクロール(最初は一番下=Row0)
+  setTimeout(() => {
+    const target = run.currentRow < 0 ? MAP_ROWS * MAP_ROW_H
+                 : (BOSS_ROW - run.currentRow + 1.5) * MAP_ROW_H;
+    scroller.scrollTop = Math.max(0, target - scroller.clientHeight);
+  }, 0);
+
   return [renderHud(), s];
 }
 
@@ -1953,7 +2317,7 @@ const RENDERERS = {
   DIFFICULTY: renderDifficulty,
   EXERCISE: renderExercise,
   DECK_PREVIEW: renderDeckPreview,
-  MAP: renderMapTemp,
+  MAP: renderMap,
   BATTLE: renderBattle,
   REWARD: () => renderBattleResult(true),
   GAMEOVER: () => renderBattleResult(false)
@@ -2042,6 +2406,8 @@ window.MROG = { G, CARDS, CARD_LIST, ENEMIES, RELICS, DIFFICULTY, NODE_WEIGHTS,
   startBattle, playCard, endPlayerTurn, drawCard, calcDamage, gainBlock,
   cardDisplayText, effectText, resolveEffect, decideIntent, checkBattleEnd,
   ENCOUNTERS, pickEncounter, syncPhase, phaseIndexFor, phaseThreshold, intentText,
+  generateMap, validateMap, mapProblems, mapNodes, selectableNodes, enterNode, currentNode,
+  MAP_ROWS, MAP_COLS, BOSS_ROW,
   get battle(){ return G.battle; } };
 </script>
 </body>
