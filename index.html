@@ -151,6 +151,54 @@ body{
 .mr-cathead.DEBUFF{color:var(--dbf)} .mr-cathead.POWER{color:var(--pwr)}
 .mr-scroll{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;min-height:0}
 .mr-sticky{flex:0 0 auto;background:var(--bg);padding-top:8px;display:flex;flex-direction:column;gap:8px}
+
+/* 戦闘 */
+.mr-battle{gap:10px;padding:12px}
+.mr-enemies{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding-top:6px}
+.mr-enemy{
+  background:var(--panel);border:1.5px solid var(--line);border-radius:10px;padding:10px;
+  min-width:132px;max-width:190px;flex:1 1 auto;display:flex;flex-direction:column;gap:6px;
+}
+.mr-enemy.targetable{border-color:var(--atk);cursor:pointer;box-shadow:0 0 12px rgba(226,87,76,.35)}
+.mr-enemy.targetable:hover{background:#2a1f22}
+.mr-enemy .eintent{font-size:15px;font-weight:800;color:#ffb4ac;min-height:22px;text-align:center}
+.mr-enemy .ename{font-size:13px;font-weight:700;text-align:center;line-height:1.3}
+.mr-bar{position:relative;height:16px;background:#0f1218;border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.mr-bar .fill{height:100%;background:linear-gradient(180deg,#e2574c,#a63a32);transition:width .18s}
+.mr-bar.hp .fill{background:linear-gradient(180deg,#d0453c,#8e2f28)}
+.mr-bar .barlabel{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:10.5px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.9);
+}
+.estat{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;min-height:0}
+.estat span{font-size:11px;padding:1px 6px;border-radius:99px;background:#161a22;border:1px solid var(--line)}
+.estat .sblock{color:var(--block);border-color:#3b6d96}
+.estat .weak{color:#9ad0ff} .estat .vulnerable{color:#ffa0a0}
+.estat .bleed{color:#ff7b7b} .estat .strength{color:#ffcf6b}
+.estat .evade{color:#8fe0b6} .estat .counter{color:#d6a0f0}
+.estat .power{color:var(--pwr);border-color:#3b6d96}
+
+.mr-pstat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px}
+.mr-log{
+  background:#10131a;border:1px solid var(--line);border-radius:8px;padding:7px 9px;
+  font-size:11.5px;color:#a8b0c0;line-height:1.55;max-height:92px;overflow-y:auto;
+}
+.mr-log div+div{margin-top:1px}
+.mr-bbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.mr-energy{
+  background:#3a3106;border:1.5px solid var(--energy);color:var(--energy);
+  border-radius:99px;padding:4px 12px;font-size:13px;font-weight:700;
+}
+.mr-energy b{font-size:17px}
+.mr-energy.on{box-shadow:0 0 10px rgba(232,195,74,.3)}
+.mr-pile{font-size:11px;color:var(--dim);border:1px solid var(--line);border-radius:6px;padding:4px 7px}
+.mr-hint{font-size:11.5px;color:#ffb4ac;text-align:center}
+.mr-hand{
+  display:flex;gap:7px;overflow-x:auto;padding:8px 2px 4px;min-height:160px;align-items:flex-start;
+  scrollbar-width:thin;
+}
+.mr-hand .mr-card{width:98px;min-height:142px}
+.mr-card.selected{outline:2px solid var(--energy);outline-offset:2px;transform:translateY(-6px)}
 .mr-debug .t{font-size:10px;color:#c88;letter-spacing:.08em}
 </style>
 </head>
@@ -704,6 +752,430 @@ function startRun(draft){
 }
 
 
+/* ===== SECTION: BATTLE ===== */
+const MAX_HAND = 10;
+const STATUS_ICON = { weak:'🌀', vulnerable:'💥', bleed:'🩸', strength:'💪' };
+const STATUS_NAME = { weak:'弱体', vulnerable:'脆弱', bleed:'出血', strength:'力' };
+const INTENT_ICON = { attack:'⚔', block:'🛡', buff:'⬆', debuff:'⬇', heal:'✚' };
+
+let B = null;   // G.battle のショートカット
+
+function newStatus(){ return { weak:0, vulnerable:0, bleed:0, strength:0 }; }
+
+function makeEnemy(id, idx){
+  const def = ENEMIES[id];
+  if (!def) throw new Error('未知の敵ID: ' + id);
+  const d = DIFFICULTY[G.run.difficulty];
+  const hp = Math.round(range(def.hpMin, def.hpMax) * d.enemyHpMult);
+  return {
+    uid: 'e' + idx, id: id, name: def.name, tier: def.tier,
+    hp: hp, maxHp: hp, block: 0,
+    status: Object.assign(newStatus(), { strength: d.enemyStartStrength[def.tier] || 0 }),
+    phaseIdx: 0, patternIdx: def.startPatternIdx || 0,
+    intent: null, turnCount: 0, alive: true,
+  };
+}
+
+function log(msg){
+  if (!msg) return;
+  B.log.push(msg);
+  if (B.log.length > 60) B.log.shift();
+}
+
+function startBattle(enemyIds){
+  B = G.battle = {
+    enemyIds: enemyIds.slice(),
+    enemies: enemyIds.map((id, i) => makeEnemy(id, i)),
+    drawPile: [], hand: [], discardPile: [], exhaustPile: [], powers: [],
+    energy: 3, maxEnergy: 3,
+    block: 0, status: newStatus(),
+    evade: 0, counter: 0, keepBlock: false, reflectPending: 0,
+    blockPerTurn: [],
+    attacksPlayedThisTurn: 0,
+    turn: 0, phase: 'PLAYER',
+    selecting: null,
+    log: [],
+  };
+  B.drawPile = shuffle(G.run.deck.map(c => ({ uid:c.uid, id:c.id, upgraded:c.upgraded })));
+  log('戦闘開始: ' + B.enemies.map(e => e.name).join(' / '));
+  // TODO(Phase 7): fireRelicHook('onBattleStart')
+  startPlayerTurn();
+  go('BATTLE');
+}
+
+function startPlayerTurn(){
+  B.turn++;
+  B.phase = 'PLAYER';
+  B.selecting = null;
+  B.energy = B.maxEnergy;
+  if (!B.keepBlock) B.block = 0;
+  // 回避 / 反撃は直前の敵ターンを守るためのもの。持ち越さない
+  B.evade = 0;
+  B.counter = 0;
+
+  // ターン開始時のブロック(踏ん張り / 継続する強さ)
+  for (let i = B.blockPerTurn.length - 1; i >= 0; i--){
+    const bp = B.blockPerTurn[i];
+    gainBlock(bp.value);
+    log('ターン開始: ブロック+' + bp.value);
+    if (bp.turnsLeft !== Infinity){
+      bp.turnsLeft--;
+      if (bp.turnsLeft <= 0) B.blockPerTurn.splice(i, 1);
+    }
+  }
+
+  if (B.status.weak > 0) B.status.weak--;
+  if (B.status.vulnerable > 0) B.status.vulnerable--;
+  B.attacksPlayedThisTurn = 0;
+
+  drawCard(Math.max(0, 5 - B.hand.length));
+  for (const e of B.enemies) if (e.alive) e.intent = decideIntent(e);
+  // TODO(Phase 7): fireRelicHook('onTurnStart')
+}
+
+function drawCard(n){
+  for (let i = 0; i < n; i++){
+    if (B.hand.length >= MAX_HAND){ log('手札が上限(' + MAX_HAND + '枚)のため引けない'); return; }
+    if (!B.drawPile.length){
+      if (!B.discardPile.length) { log('山札が尽きた'); return; }
+      B.drawPile = shuffle(B.discardPile);
+      B.discardPile = [];
+      log('捨て札をシャッフルして山札に戻した');
+    }
+    B.hand.push(B.drawPile.pop());
+  }
+}
+
+/* --- ダメージ計算 --- */
+function calcDamage(base, attacker, defender, opts){
+  opts = opts || {};
+  const useStr  = opts.strength   !== false;
+  const useWeak = opts.weak       !== false;
+  const useVuln = opts.vulnerable !== false;
+  let v = base + (useStr ? (attacker.status.strength || 0) : 0);
+  if (v < 0) v = 0;
+  if (useVuln && defender.status.vulnerable > 0) v *= 1.5;
+  if (useWeak && attacker.status.weak > 0) v *= 0.75;
+  return Math.floor(v);
+}
+
+function playerActor(){ return { isPlayer:true, status: B.status }; }
+
+function gainBlock(v){
+  let amount = v;
+  for (const p of B.powers){
+    for (const e of effectiveCard(p).effects) if (e.type === 'blockBonus') amount += e.value;
+  }
+  if (amount < 0) amount = 0;
+  B.block += amount;
+  return amount;
+}
+
+function dealDamageToEnemy(enemy, amount, opts){
+  if (!enemy.alive || amount <= 0) return 0;
+  opts = opts || {};
+  let dealt = amount;
+  if (!opts.ignoreBlock){
+    const absorbed = Math.min(enemy.block, dealt);
+    enemy.block -= absorbed;
+    dealt -= absorbed;
+  }
+  enemy.hp -= dealt;
+  if (enemy.hp <= 0){
+    enemy.hp = 0;
+    enemy.alive = false;
+    log(enemy.name + 'を倒した!');
+    onEnemyDeath(enemy);
+  }
+  return dealt;
+}
+
+function onEnemyDeath(dead){
+  for (const e of B.enemies){
+    if (e === dead || !e.alive) continue;
+    const def = ENEMIES[e.id];
+    if (def.onAllyDeath) log(def.onAllyDeath(e));
+  }
+}
+
+/** 敵からプレイヤーへの攻撃1ヒット分 */
+function dealDamageToPlayer(amount, source){
+  if (B.evade > 0){
+    B.evade--;
+    log('回避! 攻撃を無効化した(残り' + B.evade + ')');
+    triggerCounter(source);
+    return 0;
+  }
+  const absorbed = Math.min(B.block, amount);
+  B.block -= absorbed;
+  const through = amount - absorbed;
+  G.run.hp -= through;
+  if (G.run.hp < 0) G.run.hp = 0;
+  log('プレイヤーに' + amount + 'ダメージ'
+      + (absorbed ? '(ブロックで' + absorbed + '軽減)' : '')
+      + ' → HP ' + G.run.hp);
+  triggerCounter(source);
+  return through;
+}
+
+function triggerCounter(source){
+  if (B.counter <= 0 || !source || !source.alive) return;
+  const dmg = B.counter;
+  B.counter = 0;
+  log('カウンター! ' + source.name + 'に' + dmg + 'ダメージ');
+  dealDamageToEnemy(source, dmg);
+}
+
+/* --- カード使用 --- */
+function cardCost(card){
+  let cost = card.cost;
+  // TODO(Phase 7): fireRelicHook('onCardCost')
+  return Math.max(0, cost);
+}
+
+function livingEnemies(){ return B.enemies.filter(e => e.alive); }
+
+function canPlay(inst){
+  if (B.phase !== 'PLAYER') return false;
+  return cardCost(effectiveCard(inst)) <= B.energy;
+}
+
+/** handIndex のカードを使う。targetIdx は B.enemies のインデックス */
+function playCard(handIndex, targetIdx){
+  if (B.phase !== 'PLAYER') return;
+  const inst = B.hand[handIndex];
+  if (!inst) return;
+  const card = effectiveCard(inst);
+  const cost = cardCost(card);
+  if (cost > B.energy){ log('Energyが足りない'); return; }
+
+  const alive = livingEnemies();
+  if (!alive.length) return;
+  let target = null;
+  if (card.target === 'single'){
+    target = B.enemies[targetIdx];
+    if (!target || !target.alive) target = alive[0];
+  }
+
+  B.energy -= cost;
+  B.hand.splice(handIndex, 1);
+  B.selecting = null;
+  log('▶ ' + card.name + (card.target === 'single' && alive.length > 1 ? ' → ' + target.name : ''));
+
+  const ctx = { card: card, inst: inst, target: target };
+  for (const e of card.effects) resolveEffect(e, ctx);
+
+  if (card.type === 'attack') B.attacksPlayedThisTurn++;
+  if (card.type === 'power' ) firePowerUsed(card);
+
+  if (card.keep)          B.powers.push(inst);
+  else if (card.exhaust)  B.exhaustPile.push(inst);
+  else                    B.discardPile.push(inst);
+
+  checkBattleEnd();
+  if (B.phase === 'PLAYER') render();
+}
+
+/** 忍耐【Power】: POWERカードを使うたびブロック */
+function firePowerUsed(justPlayed){
+  for (const p of B.powers){
+    for (const e of effectiveCard(p).effects){
+      if (e.type === 'blockOnPower'){
+        const got = gainBlock(e.value);
+        log('[忍耐] ブロック+' + got);
+      }
+    }
+  }
+}
+
+/* --- 効果解決 --- */
+function resolveEffect(e, ctx){
+  const card = ctx.card;
+  const me = playerActor();
+  const targets = card.target === 'all' ? livingEnemies()
+                : ctx.target ? [ctx.target] : [];
+
+  switch (e.type){
+    case 'damage': {
+      for (const t of targets){
+        const dmg = calcDamage(e.value, me, t, { strength: card.type === 'attack' });
+        dealDamageToEnemy(t, dmg);
+        log(t.name + 'に' + dmg + 'ダメージ (残HP ' + t.hp + ')');
+      }
+      break;
+    }
+    case 'damageMulti': {
+      for (let i = 0; i < e.times; i++){
+        for (const t of targets){
+          if (!t.alive) continue;
+          const dmg = calcDamage(e.value, me, t, { strength: card.type === 'attack' });
+          dealDamageToEnemy(t, dmg);
+          log(t.name + 'に' + dmg + 'ダメージ (' + (i + 1) + '/' + e.times + ', 残HP ' + t.hp + ')');
+        }
+      }
+      break;
+    }
+    case 'block': {
+      const got = gainBlock(e.value);
+      log('ブロック+' + got + ' (合計' + B.block + ')');
+      break;
+    }
+    case 'draw':
+      drawCard(e.value);
+      log('カードを' + e.value + '枚引いた');
+      break;
+    case 'status': {
+      for (const t of targets){
+        t.status[e.key] = (t.status[e.key] || 0) + e.value;
+        log(t.name + 'に' + STATUS_NAME[e.key] + e.value + 'を付与');
+      }
+      break;
+    }
+    case 'evade':
+      B.evade += e.value;
+      log('回避態勢(' + B.evade + '回)');
+      break;
+    case 'blockPerTurn':
+      B.blockPerTurn.push({ value: e.value, turnsLeft: e.turns === 0 ? Infinity : e.turns });
+      log(e.turns === 0 ? '毎ターン開始時にブロック' + e.value
+                        : e.turns + 'ターンの間ターン開始時にブロック' + e.value);
+      break;
+    default:
+      console.warn('未実装のeffect(Phase 3で実装): ' + e.type);
+  }
+}
+
+/* --- ターン終了 / 敵ターン --- */
+function endPlayerTurn(){
+  if (B.phase !== 'PLAYER') return;
+  B.phase = 'ENEMY';
+  B.selecting = null;
+
+  // 反発: 残ブロック分を敵全体に反射
+  if (B.reflectPending > 0 && B.block > 0){
+    const me = playerActor();
+    for (const t of livingEnemies()){
+      const dmg = calcDamage(B.block, me, t, { strength:false, weak:false });
+      dealDamageToEnemy(t, dmg);
+      log('[反発] ' + t.name + 'に' + dmg + 'ダメージ');
+    }
+  }
+  B.reflectPending = 0;
+
+  while (B.hand.length) B.discardPile.push(B.hand.pop());
+
+  if (checkBattleEnd()) return;
+  render();
+  setTimeout(runEnemyTurn, 350);
+}
+
+function runEnemyTurn(){
+  if (!B || B.phase !== 'ENEMY') return;
+  const queue = livingEnemies().slice();
+  const step = () => {
+    if (!B || B.phase !== 'ENEMY') return;
+    const e = queue.shift();
+    if (!e){ finishEnemyTurn(); return; }
+    if (e.alive) actEnemy(e);
+    render();
+    if (checkBattleEnd()) return;
+    setTimeout(step, 320);
+  };
+  step();
+}
+
+function actEnemy(e){
+  const def = ENEMIES[e.id];
+  e.block = 0;                                  // 敵のブロックは自ターン開始時に消える
+  if (def.onTurnStart) log(def.onTurnStart(e));
+
+  const act = e.intent || decideIntent(e);
+  const d = DIFFICULTY[G.run.difficulty];
+
+  if (act.intent === 'attack'){
+    const times = act.times || 1;
+    const base = Math.floor(act.value * d.enemyDmgMult);
+    for (let i = 0; i < times; i++){
+      const dmg = calcDamage(base, e, playerActor(), {});
+      log(e.name + 'の攻撃' + (times > 1 ? '(' + (i + 1) + '/' + times + ')' : ''));
+      dealDamageToPlayer(dmg, e);
+      if (G.run.hp <= 0) break;
+    }
+  } else if (act.intent === 'block'){
+    e.block += act.value;
+    log(e.name + 'はブロック' + act.value + 'を得た');
+  } else if (act.intent === 'buff'){
+    e.status.strength += act.value;
+    log(e.name + 'の力+' + act.value);
+  } else if (act.intent === 'heal'){
+    e.hp = Math.min(e.maxHp, e.hp + act.value);
+    log(e.name + 'はHPを' + act.value + '回復した (' + e.hp + ')');
+  }
+  // 複合キー
+  if (act.strength){ e.status.strength += act.strength; log(e.name + 'の力+' + act.strength); }
+  if (act.heal && act.intent !== 'heal'){
+    e.hp = Math.min(e.maxHp, e.hp + act.heal);
+    log(e.name + 'はHPを' + act.heal + '回復した (' + e.hp + ')');
+  }
+  if (act.status){
+    for (const k in act.status){
+      B.status[k] = (B.status[k] || 0) + act.status[k];
+      log('プレイヤーに' + STATUS_NAME[k] + act.status[k] + 'を付与');
+    }
+  }
+
+  if (e.status.weak > 0) e.status.weak--;
+  if (e.status.vulnerable > 0) e.status.vulnerable--;
+  e.turnCount++;
+  advancePattern(e);
+}
+
+function finishEnemyTurn(){
+  // ターン終了時: 出血
+  for (const e of livingEnemies()){
+    if (e.status.bleed > 0){
+      let amount = e.status.bleed;
+      // TODO(Phase 7): fireRelicHook('onBleedDamage')
+      dealDamageToEnemy(e, amount, { ignoreBlock:true });
+      log('[出血] ' + e.name + 'に' + amount + 'ダメージ (残HP ' + e.hp + ')');
+    }
+  }
+  if (checkBattleEnd()) return;
+  startPlayerTurn();
+  render();
+}
+
+/* --- 敵AI(Phase 2 は固定ループのみ。Phase 4 でフェーズ/重み抽選に拡張) --- */
+function currentPhase(e){
+  const def = ENEMIES[e.id];
+  return def.phases[e.phaseIdx] || def.phases[0];
+}
+function decideIntent(e){
+  const ph = currentPhase(e);
+  return ph.pattern[e.patternIdx % ph.pattern.length];
+}
+function advancePattern(e){
+  e.patternIdx++;
+  if (e.alive) e.intent = decideIntent(e);
+}
+
+/* --- 勝敗判定 --- */
+function checkBattleEnd(){
+  if (G.run.hp <= 0){
+    B.phase = 'LOSE';
+    log('敗北…');
+    setTimeout(() => { go('GAMEOVER'); }, 400);
+    return true;
+  }
+  if (!livingEnemies().length){
+    B.phase = 'WIN';
+    log('戦闘に勝利した!');
+    setTimeout(() => { go('REWARD'); }, 400);
+    return true;
+  }
+  return false;
+}
+
 /* ===== SECTION: SCREENS ===== */
 const SCREENS = ['TITLE','DIFFICULTY','EXERCISE','DECK_PREVIEW','MAP','BATTLE','REWARD',
                  'SHOP','REST','EVENT','TREASURE','META','GAMEOVER','VICTORY'];
@@ -807,7 +1279,7 @@ function renderTitle(){
 
   s.appendChild(el('div', 'mr-spacer'));
   const foot = el('div', 'mr-note mr-center');
-  foot.innerHTML = 'Phase 1 — 運動入力→デッキ生成 / 難易度選択<br>'
+  foot.innerHTML = 'Phase 2 — 戦闘コア<br>'
     + 'カード ' + Object.keys(CARDS).length + '種 / 敵 ' + Object.keys(ENEMIES).length + '種 / レリック '
     + Object.keys(RELICS).length + '種';
   s.appendChild(foot);
@@ -1059,11 +1531,198 @@ function renderDeckPreview(){
 }
 
 
+/* --- 戦闘画面 --- */
+function renderBattle(){
+  if (!G.battle){ go('MAP'); return el('div'); }
+  B = G.battle;
+  const s = el('div', 'mr-screen mr-battle');
+
+  /* 敵 */
+  const et = el('div', 'mr-enemies');
+  B.enemies.forEach((e, idx) => { if (e.alive) et.appendChild(renderEnemy(e, idx)); });
+  s.appendChild(et);
+
+  /* プレイヤー状態 */
+  s.appendChild(renderPlayerStatus());
+
+  /* ログ */
+  const logBox = el('div', 'mr-log');
+  logBox.innerHTML = B.log.slice(-5).map(l => '<div>' + l + '</div>').join('');
+  s.appendChild(logBox);
+
+  s.appendChild(el('div', 'mr-spacer'));
+
+  /* 操作列 */
+  const bar = el('div', 'mr-bbar');
+  const en = el('div', 'mr-energy' + (B.energy > 0 ? ' on' : ''));
+  en.innerHTML = '<b>' + B.energy + '</b>/' + B.maxEnergy;
+  bar.appendChild(en);
+  bar.appendChild(el('div', 'mr-pile', '山札 ' + B.drawPile.length));
+  bar.appendChild(el('div', 'mr-pile', '捨札 ' + B.discardPile.length));
+  if (B.exhaustPile.length) bar.appendChild(el('div', 'mr-pile', '除外 ' + B.exhaustPile.length));
+  bar.appendChild(el('div', 'mr-spacer'));
+  const endBtn = el('button', 'mr-btn small ' + (B.phase === 'PLAYER' ? 'primary' : ''),
+                    B.phase === 'PLAYER' ? 'ターン終了' : '敵のターン…');
+  endBtn.disabled = B.phase !== 'PLAYER';
+  endBtn.addEventListener('click', endPlayerTurn);
+  bar.appendChild(endBtn);
+  s.appendChild(bar);
+
+  if (B.selecting != null) s.appendChild(el('div', 'mr-hint', '↑ 対象の敵を選んでください(もう一度カードを押すとキャンセル)'));
+
+  /* 手札 */
+  const hand = el('div', 'mr-hand');
+  B.hand.forEach((inst, i) => {
+    const card = effectiveCard(inst);
+    const playable = canPlay(inst);
+    const node = renderCardEl(inst, {
+      cost: cardCost(card),
+      text: cardDisplayText(inst),
+      playable: playable,
+      disabled: !playable,
+      onClick: () => onHandCardClick(i),
+    });
+    if (B.selecting === i) node.classList.add('selected');
+    hand.appendChild(node);
+  });
+  if (!B.hand.length) hand.appendChild(el('div', 'mr-note', '手札なし'));
+  s.appendChild(hand);
+
+  return s;
+}
+
+function renderEnemy(e, idx){
+  const n = el('div', 'mr-enemy' + (B.selecting != null ? ' targetable' : ''));
+  n.appendChild(el('div', 'eintent', intentText(e)));
+  n.appendChild(el('div', 'ename', e.name));
+  const bar = el('div', 'mr-bar');
+  const fill = el('div', 'fill');
+  fill.style.width = Math.max(0, (e.hp / e.maxHp) * 100) + '%';
+  bar.appendChild(fill);
+  bar.appendChild(el('span', 'barlabel', e.hp + ' / ' + e.maxHp));
+  n.appendChild(bar);
+  const row = el('div', 'estat');
+  if (e.block > 0) row.appendChild(el('span', 'sblock', '🛡' + e.block));
+  for (const k of ['weak','vulnerable','bleed','strength']){
+    if (e.status[k] > 0) row.appendChild(el('span', 'stag ' + k,
+      STATUS_ICON[k] + e.status[k]));
+  }
+  n.appendChild(row);
+  if (B.selecting != null){
+    n.addEventListener('click', () => playCard(B.selecting, idx));
+  }
+  return n;
+}
+
+function intentText(e){
+  const act = e.intent;
+  if (!act) return '';
+  const d = DIFFICULTY[G.run.difficulty];
+  if (act.intent === 'attack'){
+    const dmg = calcDamage(Math.floor(act.value * d.enemyDmgMult), e, playerActor(), {});
+    return INTENT_ICON.attack + ' ' + dmg + (act.times > 1 ? '×' + act.times : '');
+  }
+  if (act.intent === 'block') return INTENT_ICON.block + ' ' + act.value;
+  if (act.intent === 'heal')  return INTENT_ICON.heal  + ' ' + act.value;
+  if (act.intent === 'buff')  return INTENT_ICON.buff;
+  if (act.intent === 'debuff')return INTENT_ICON.debuff;
+  return '';
+}
+
+function renderPlayerStatus(){
+  const p = el('div', 'mr-pstat');
+  const bar = el('div', 'mr-bar hp');
+  const fill = el('div', 'fill');
+  fill.style.width = Math.max(0, (G.run.hp / G.run.maxHp) * 100) + '%';
+  bar.appendChild(fill);
+  bar.appendChild(el('span', 'barlabel', '❤ ' + G.run.hp + ' / ' + G.run.maxHp));
+  p.appendChild(bar);
+
+  const row = el('div', 'estat');
+  if (B.block > 0)  row.appendChild(el('span', 'sblock', '🛡' + B.block + (B.keepBlock ? '*' : '')));
+  if (B.evade > 0)  row.appendChild(el('span', 'stag evade', '💨' + B.evade));
+  if (B.counter > 0)row.appendChild(el('span', 'stag counter', '↩' + B.counter));
+  for (const k of ['weak','vulnerable','strength']){
+    if (B.status[k] > 0) row.appendChild(el('span', 'stag ' + k, STATUS_ICON[k] + B.status[k]));
+  }
+  for (const bp of B.blockPerTurn){
+    row.appendChild(el('span', 'stag', '🛡/T ' + bp.value
+      + (bp.turnsLeft === Infinity ? '' : '(' + bp.turnsLeft + ')')));
+  }
+  // 場のPower
+  const powerCount = {};
+  for (const p2 of B.powers) powerCount[p2.id] = (powerCount[p2.id] || 0) + 1;
+  for (const id in powerCount){
+    row.appendChild(el('span', 'stag power',
+      CARDS[id].name + (powerCount[id] > 1 ? '×' + powerCount[id] : '')));
+  }
+  if (row.childNodes.length) p.appendChild(row);
+  p.appendChild(el('div', 'mr-note', 'ターン ' + B.turn));
+  return p;
+}
+
+/** 現在の状態を反映したカードテキスト(Phase 3 で条件付きカードに拡張) */
+function cardDisplayText(inst){
+  return effectiveCard(inst).text;
+}
+
+function onHandCardClick(i){
+  const inst = B.hand[i];
+  if (!inst || !canPlay(inst)) return;
+  const card = effectiveCard(inst);
+  const alive = livingEnemies();
+  if (card.target === 'single' && alive.length > 1){
+    B.selecting = (B.selecting === i) ? null : i;
+    render();
+    return;
+  }
+  const idx = B.enemies.findIndex(e => e.alive);
+  playCard(i, idx);
+}
+
+/* --- 戦闘後の暫定画面(Phase 6 で本実装) --- */
+function renderBattleResult(win){
+  const s = el('div', 'mr-screen');
+  const ph = el('div', 'mr-placeholder');
+  ph.appendChild(el('div', 'mr-title', win ? '戦闘に勝利' : '敗北'));
+  ph.appendChild(el('div', 'mr-sub', win ? '報酬画面は Phase 6 で実装' : 'Phase 6 で実装'));
+  if (G.battle){
+    ph.appendChild(el('div', 'mr-note',
+      'ターン ' + G.battle.turn + ' / 残HP ' + G.run.hp + '/' + G.run.maxHp));
+  }
+  s.appendChild(ph);
+  if (win){
+    s.appendChild(btn('マップへ戻る', 'primary', () => { G.battle = null; B = null; saveGame(); go('MAP'); }));
+  } else {
+    s.appendChild(btn('タイトルへ', 'primary', () => {
+      G.battle = null; B = null; G.run = null; saveGame(); go('TITLE');
+    }));
+  }
+  return s;
+}
+
+/* --- マップ(Phase 5 で本実装。今はテスト戦闘の入口) --- */
+function renderMapTemp(){
+  const s = el('div', 'mr-screen');
+  const ph = el('div', 'mr-placeholder');
+  ph.appendChild(el('div', 'mr-title', 'マップ'));
+  ph.appendChild(el('div', 'mr-sub', 'Phase 5 で実装'));
+  s.appendChild(ph);
+  s.appendChild(btn('テスト戦闘(スライムモドキ)', 'primary', () => startBattle(['slime_fake'])));
+  s.appendChild(btn('テスト戦闘(スライム×2)', '', () => startBattle(['slime_fake','slime_fake'])));
+  s.appendChild(btn('タイトルへ戻る', 'ghost', () => go('TITLE')));
+  return [renderHud(), s];
+}
+
 const RENDERERS = {
   TITLE: renderTitle,
   DIFFICULTY: renderDifficulty,
   EXERCISE: renderExercise,
   DECK_PREVIEW: renderDeckPreview,
+  MAP: renderMapTemp,
+  BATTLE: renderBattle,
+  REWARD: () => renderBattleResult(true),
+  GAMEOVER: () => renderBattleResult(false),
 };
 
 /* --- デバッグパネル --- */
@@ -1084,6 +1743,19 @@ function renderDebugPanel(){
     saveGame(); render();
   }));
   p.appendChild(btn('セーブ削除', 'small', () => { resetSave(); render(); }));
+  if (G.battle && G.battle.phase === 'PLAYER'){
+    p.appendChild(el('div', 't', 'BATTLE'));
+    p.appendChild(btn('敵HP1', 'small', () => {
+      for (const e of G.battle.enemies) if (e.alive) e.hp = 1;
+      render();
+    }));
+    p.appendChild(btn('Energy+10', 'small', () => { G.battle.energy += 10; render(); }));
+    p.appendChild(btn('1枚引く', 'small', () => { drawCard(1); render(); }));
+    p.appendChild(btn('勝利', 'small', () => {
+      for (const e of G.battle.enemies){ e.hp = 0; e.alive = false; }
+      checkBattleEnd(); render();
+    }));
+  }
   return p;
 }
 
@@ -1115,7 +1787,9 @@ boot();
 window.MROG = { G, CARDS, CARD_LIST, ENEMIES, RELICS, DIFFICULTY, NODE_WEIGHTS,
   saveGame, loadGame, resetSave, go, render, effectiveCard,
   normalizeExercise, toCount, cardsFromCount, coresFromCount, coresGained,
-  rollRarity, rollCardOf, buildDeck, startRun, newDraft };
+  rollRarity, rollCardOf, buildDeck, startRun, newDraft,
+  startBattle, playCard, endPlayerTurn, drawCard, calcDamage, gainBlock,
+  get battle(){ return G.battle; } };
 </script>
 </body>
 </html>
