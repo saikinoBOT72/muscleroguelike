@@ -20,9 +20,9 @@ body{
   font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
   font-size:15px; line-height:1.6; overscroll-behavior:none;
 }
-#app{max-width:480px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column}
+#app{max-width:480px;margin:0 auto;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
 
-.mr-screen{flex:1;display:flex;flex-direction:column;padding:16px;gap:14px}
+.mr-screen{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;padding:16px;gap:14px}
 .mr-title{font-size:22px;font-weight:700;letter-spacing:.04em;margin:0}
 .mr-sub{color:var(--dim);font-size:13px;margin:0}
 .mr-panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
@@ -71,10 +71,10 @@ body{
   border:1.5px solid var(--line);display:flex;flex-direction:column;gap:5px;
   font-size:11px;line-height:1.4;cursor:default;flex:0 0 auto;
 }
-.mr-card .cname{font-size:12px;font-weight:700;line-height:1.25;padding-right:2px}
+.mr-card .cname{font-size:12px;font-weight:700;line-height:1.25;padding-left:19px;min-height:15px}
 .mr-card .ctext{color:#cfd6e2;flex:1}
 .mr-card .ccost{
-  position:absolute;top:-7px;left:-7px;width:24px;height:24px;border-radius:50%;
+  position:absolute;top:-6px;left:-6px;width:23px;height:23px;border-radius:50%;
   background:var(--energy);color:#241d05;font-weight:800;font-size:13px;
   display:flex;align-items:center;justify-content:center;border:2px solid #14161c;
 }
@@ -98,6 +98,59 @@ body{
   position:fixed;right:8px;bottom:8px;z-index:99;background:#2a1a1a;border:1px solid #6a3a3a;
   border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:6px;max-width:170px;
 }
+
+/* 難易度選択 */
+.mr-diff{display:flex;flex-direction:column;gap:10px}
+.mr-diffbtn{
+  text-align:left;border:1.5px solid var(--line);background:var(--panel2);color:var(--text);
+  font:inherit;padding:14px;border-radius:10px;cursor:pointer;transition:border-color .12s,background .12s;
+}
+.mr-diffbtn:hover{background:#2e3444}
+.mr-diffbtn .dn{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px}
+.mr-diffbtn .dd{font-size:12px;color:var(--dim);margin-top:6px;line-height:1.7}
+.mr-diffbtn.normal{border-color:#3f6b93} .mr-diffbtn.normal .dn{color:#7fb6e6}
+.mr-diffbtn.hard{border-color:#8a5a2a}   .mr-diffbtn.hard   .dn{color:#f0a04a}
+
+/* 運動入力 */
+.mr-ex{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.mr-ex .exhead{display:flex;align-items:baseline;gap:8px}
+.mr-ex .exname{font-weight:700;font-size:14px}
+.mr-ex .excat{font-size:11px;padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--dim)}
+.mr-ex.cat-ATTACK .excat{color:var(--atk);border-color:var(--atk)}
+.mr-ex.cat-SKILL  .excat{color:var(--skl);border-color:var(--skl)}
+.mr-ex.cat-DEBUFF .excat{color:var(--dbf);border-color:var(--dbf)}
+.mr-ex.cat-POWER  .excat{color:var(--pwr);border-color:var(--pwr)}
+.mr-ex .exinput{display:flex;gap:6px;align-items:center}
+.mr-ex input[type=number]{
+  flex:1;min-width:0;font:inherit;font-size:19px;font-weight:700;text-align:center;
+  background:#12151b;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 4px;
+}
+.mr-ex input[type=number]::-webkit-outer-spin-button,
+.mr-ex input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.mr-ex input[type=number]{-moz-appearance:textfield}
+.mr-step{
+  font:inherit;font-size:12px;font-weight:700;background:var(--panel2);color:var(--text);
+  border:1px solid var(--line);border-radius:7px;padding:8px 0;cursor:pointer;min-width:38px;
+}
+.mr-step:hover{background:#2e3444}
+.mr-ex .exout{font-size:12px;color:var(--dim);display:flex;gap:10px;flex-wrap:wrap}
+.mr-ex .exout b{color:var(--text)}
+.mr-ex .exout .zero{color:#6a7183}
+
+.mr-table{width:100%;border-collapse:collapse;font-size:12px}
+.mr-table th,.mr-table td{border-bottom:1px solid var(--line);padding:6px 4px;text-align:right}
+.mr-table th:first-child,.mr-table td:first-child{text-align:left}
+.mr-table th{color:var(--dim);font-weight:600}
+.mr-table td b{font-size:14px}
+
+.mr-cathead{
+  display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;margin:2px 0;
+}
+.mr-cathead .bar{flex:1;height:1px;background:var(--line)}
+.mr-cathead.ATTACK{color:var(--atk)} .mr-cathead.SKILL{color:var(--skl)}
+.mr-cathead.DEBUFF{color:var(--dbf)} .mr-cathead.POWER{color:var(--pwr)}
+.mr-scroll{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;min-height:0}
+.mr-sticky{flex:0 0 auto;background:var(--bg);padding-top:8px;display:flex;flex-direction:column;gap:8px}
 .mr-debug .t{font-size:10px;color:#c88;letter-spacing:.08em}
 </style>
 </head>
@@ -490,6 +543,7 @@ const G = {
   meta: newMeta(),
   run: null,
   battle: null,
+  draft: null,   // 難易度選択〜デッキ確認までの一時状態(セーブ対象外)
 };
 
 function saveGame(){
@@ -535,6 +589,118 @@ function effectiveCard(inst){
   if (!base) throw new Error('未知のカードID: ' + inst.id);
   if (!inst.upgraded || !base.up) return base;
   return Object.assign({}, base, base.up, { name: base.name + '+' });
+}
+
+
+/* ===== SECTION: RUN (デッキ生成 / ラン開始) ===== */
+
+/** カード1種がアンロード済か。Phase 8 でメタ進行に接続する */
+function isUnlocked(cardId){
+  const c = CARDS[cardId];
+  if (!c) return false;
+  if (c.rarity === 'BASIC' || c.rarity === 'COMMON') return true;
+  return true; // TODO(Phase 8): G.meta.unlocked.includes(cardId) に置き換える
+}
+
+/** プランクの秒数を他種目と同じ「回数」に正規化する */
+function toCount(exKey, rawValue){
+  const v = Math.max(0, Math.floor(rawValue || 0));
+  if (exKey === 'plankSeconds') return Math.floor(v / PLANK_SECONDS_PER_COUNT);
+  return v;
+}
+
+/** 入力値 → カテゴリごとの count */
+function normalizeExercise(input){
+  const out = {};
+  for (const ex of EXERCISES) out[ex.cat] = toCount(ex.key, input[ex.key]);
+  return out;
+}
+
+/** 回数 → 生成カード枚数(0〜4) */
+function cardsFromCount(count){
+  return Math.min(Math.floor(Math.sqrt(Math.max(0, count) / 5)), 4);
+}
+
+/** 回数 → 獲得筋力コア(0〜5、難易度倍率適用前) */
+function coresFromCount(count){
+  return Math.min(Math.floor(Math.max(0, count) / 10), 5);
+}
+
+/** 難易度倍率まで適用した獲得コア数 */
+function coresGained(count, diffKey){
+  return Math.floor(coresFromCount(count) * DIFFICULTY[diffKey].coreMult);
+}
+
+const RARITY_ORDER = ['RARE','UNCOMMON','COMMON'];
+
+/** レアリティ抽選(BASIC は対象外) */
+function rollRarity(diffKey){
+  const b = DIFFICULTY[diffKey].rareWeightBonus;
+  return weightedPick([
+    { v:'COMMON',   w: 65 - b },
+    { v:'UNCOMMON', w: 25 },
+    { v:'RARE',     w: 10 + b },
+  ]);
+}
+
+/** 指定カテゴリ・レアリティから1枚選ぶ。候補が尽きたらレアリティを1段下げる */
+function rollCardOf(cat, rarity, deckSoFar){
+  const counts = {};
+  for (const inst of deckSoFar) counts[inst.id] = (counts[inst.id] || 0) + 1;
+
+  let idx = RARITY_ORDER.indexOf(rarity);
+  if (idx < 0) idx = RARITY_ORDER.indexOf('COMMON');
+
+  for (let i = idx; i < RARITY_ORDER.length; i++){
+    const r = RARITY_ORDER[i];
+    const all = CARD_LIST.filter(c => c.cat === cat && c.rarity === r && isUnlocked(c.id));
+    if (!all.length) continue;
+    const fresh = all.filter(c => (counts[c.id] || 0) < 3);
+    const pool = fresh.length ? fresh : all;   // 全部3枚に達していたら制限を解除
+    return pick(pool).id;
+  }
+  return null;
+}
+
+/** 初期デッキ8枚 + 運動由来カード(最大16枚) */
+function buildDeck(exercise, meta, diffKey){
+  const deck = STARTING_DECK.map(id =>
+    newCardInstance(id, meta.upgradedBasics.includes(id)));
+
+  const counts = normalizeExercise(exercise);
+  for (const ex of EXERCISES){
+    const n = cardsFromCount(counts[ex.cat]);
+    for (let i = 0; i < n; i++){
+      const id = rollCardOf(ex.cat, rollRarity(diffKey), deck);
+      if (id) deck.push(newCardInstance(id, false));
+    }
+  }
+  return deck;
+}
+
+/** 下書き(難易度選択〜デッキ確認までの一時状態) */
+function newDraft(diffKey){
+  return {
+    difficulty: diffKey,
+    exercise: { pushup:0, jumpSquat:0, twistLegRaise:0, plankSeconds:0 },
+    deck: null,
+  };
+}
+
+/** 下書きを確定して run を作る */
+function startRun(draft){
+  const d = DIFFICULTY[draft.difficulty];
+  G.run = {
+    difficulty: draft.difficulty,
+    hp: d.playerMaxHp, maxHp: d.playerMaxHp, gold: 99,
+    deck: draft.deck,
+    relics: [],
+    map: null, currentRow: -1, currentCol: null, visited: [],
+    exercise: Object.assign({}, draft.exercise),
+    seenEvents: [], removeCost: 75,
+  };
+  G.draft = null;
+  saveGame();
 }
 
 
@@ -641,7 +807,7 @@ function renderTitle(){
 
   s.appendChild(el('div', 'mr-spacer'));
   const foot = el('div', 'mr-note mr-center');
-  foot.innerHTML = 'Phase 0 — 土台・データ定義・画面遷移・セーブ<br>'
+  foot.innerHTML = 'Phase 1 — 運動入力→デッキ生成 / 難易度選択<br>'
     + 'カード ' + Object.keys(CARDS).length + '種 / 敵 ' + Object.keys(ENEMIES).length + '種 / レリック '
     + Object.keys(RELICS).length + '種';
   s.appendChild(foot);
@@ -677,7 +843,228 @@ function renderPlaceholder(){
   return hud ? [hud, s] : s;
 }
 
-const RENDERERS = { TITLE: renderTitle };
+/* --- 難易度選択 --- */
+function renderDifficulty(){
+  const s = el('div', 'mr-screen');
+  s.appendChild(el('h2', 'mr-title', '難易度を選ぶ'));
+  s.appendChild(el('p', 'mr-sub', 'ラン開始後は変更できません。'));
+
+  const wrap = el('div', 'mr-diff');
+  wrap.appendChild(makeDiffButton('NORMAL', 'normal', [
+    '最大HP 70 / 標準の敵',
+    '休憩で最大HPの30%回復',
+    '報酬 ×1.0',
+  ]));
+  wrap.appendChild(makeDiffButton('HARD', 'hard', [
+    '最大HP 60(-10)',
+    '敵のHP・攻撃力 ×1.25',
+    '敵は開始時から力を持つ(通常+1 / エリート・ボス+2)',
+    'ボスが早く本気になる(HP60%で第2段階)',
+    'エリートが出やすく、休憩は出にくい',
+    '休憩の回復は最大HPの20%、ショップ価格 ×1.25',
+    '報酬(ゴールド・筋力コア) ×1.2',
+  ]));
+  s.appendChild(wrap);
+
+  s.appendChild(el('div', 'mr-spacer'));
+  s.appendChild(btn('戻る', 'ghost', () => go('TITLE')));
+  return s;
+}
+
+function makeDiffButton(key, cls, lines){
+  const d = DIFFICULTY[key];
+  const b = el('button', 'mr-diffbtn ' + cls);
+  b.appendChild(el('div', 'dn', (key === 'HARD' ? '🔥 ' : '🟦 ') + d.label));
+  b.appendChild(el('div', 'dd', lines.map(l => '・' + l).join('<br>')));
+  b.addEventListener('click', () => {
+    G.draft = newDraft(key);
+    go('EXERCISE');
+  });
+  return b;
+}
+
+/* --- 運動記録の入力 --- */
+function renderExercise(){
+  if (!G.draft) { G.draft = newDraft('NORMAL'); }
+  const draft = G.draft;
+  const d = DIFFICULTY[draft.difficulty];
+
+  const s = el('div', 'mr-screen');
+  const head = el('div');
+  head.appendChild(el('h2', 'mr-title', '今日の運動記録'));
+  head.appendChild(el('p', 'mr-sub',
+    '回数がそのままデッキになる。難易度: <b>' + d.label + '</b>'));
+  s.appendChild(head);
+
+  const scroll = el('div', 'mr-scroll');
+  const updaters = [];
+
+  for (const ex of EXERCISES){
+    const box = el('div', 'mr-ex cat-' + ex.cat);
+    const h = el('div', 'exhead');
+    h.appendChild(el('span', 'exname', ex.label));
+    h.appendChild(el('span', 'excat', CAT_NAME[ex.cat] + '(' + CAT_LABEL[ex.cat] + ')'));
+    box.appendChild(h);
+
+    const row = el('div', 'exinput');
+    const input = el('input');
+    input.type = 'number'; input.min = '0'; input.step = '1';
+    input.value = String(draft.exercise[ex.key] || 0);
+    input.setAttribute('aria-label', ex.label);
+
+    const out = el('div', 'exout');
+    const update = () => {
+      let v = Math.max(0, Math.floor(Number(input.value) || 0));
+      input.value = String(v);
+      draft.exercise[ex.key] = v;
+      const count = toCount(ex.key, v);
+      const cards = cardsFromCount(count);
+      const cores = coresGained(count, draft.difficulty);
+      const parts = [];
+      if (ex.key === 'plankSeconds'){
+        parts.push('<span>' + v + '秒 → <b>' + count + 'カウント</b>相当</span>');
+      }
+      parts.push('<span>生成カード <b class="' + (cards ? '' : 'zero') + '">' + cards + '枚</b>'
+                 + (cards === 4 ? '(上限)' : '') + '</span>');
+      parts.push('<span>' + ex.coreLabel + ' <b class="' + (cores ? '' : 'zero') + '">+' + cores + '</b></span>');
+      out.innerHTML = parts.join('');
+    };
+    updaters.push(update);
+
+    // btn() は mr-btn クラスを付けてしまうので、ステッパーは個別に組む
+    const mkStep = (delta) => {
+      const b = el('button', 'mr-step', (delta > 0 ? '+' : '') + delta);
+      b.addEventListener('click', () => {
+        input.value = String(Math.max(0, (Number(input.value) || 0) + delta));
+        update(); updateTotal();
+      });
+      return b;
+    };
+    row.appendChild(mkStep(-10));
+    row.appendChild(mkStep(-1));
+    row.appendChild(input);
+    row.appendChild(mkStep(1));
+    row.appendChild(mkStep(10));
+    input.addEventListener('input', () => { update(); updateTotal(); });
+    input.addEventListener('blur', () => { update(); updateTotal(); });
+
+    box.appendChild(row);
+    box.appendChild(out);
+    scroll.appendChild(box);
+  }
+
+  const total = el('div', 'mr-panel');
+  const updateTotal = () => {
+    const counts = normalizeExercise(draft.exercise);
+    let n = 0;
+    for (const ex of EXERCISES) n += cardsFromCount(counts[ex.cat]);
+    total.innerHTML =
+      '<div class="mr-note">デッキ枚数</div>'
+      + '<div style="font-size:20px;font-weight:700">' + (STARTING_DECK.length + n) + '枚'
+      + ' <span class="mr-note" style="font-size:12px">(基本' + STARTING_DECK.length + ' + 生成' + n + ')</span></div>';
+  };
+  for (const u of updaters) u();
+  updateTotal();
+  scroll.appendChild(total);
+  scroll.appendChild(el('div', 'mr-note',
+    '※ プランクは' + PLANK_SECONDS_PER_COUNT + '秒=1カウント換算。'
+    + '生成枚数は floor(√(回数÷5)) で、1種目あたり最大4枚。'));
+  s.appendChild(scroll);
+
+  const foot = el('div', 'mr-sticky');
+  foot.appendChild(btn('この記録でデッキを組む', 'primary', () => {
+    draft.deck = buildDeck(draft.exercise, G.meta, draft.difficulty);
+    go('DECK_PREVIEW');
+  }));
+  foot.appendChild(btn('難易度を選び直す', 'ghost', () => { G.draft = null; go('DIFFICULTY'); }));
+  s.appendChild(foot);
+  return s;
+}
+
+/* --- デッキ確認 --- */
+function renderDeckPreview(){
+  const draft = G.draft;
+  if (!draft || !draft.deck){ go('EXERCISE'); return el('div'); }
+  const counts = normalizeExercise(draft.exercise);
+  const startIds = STARTING_DECK.slice();
+
+  // 初期デッキ分を取り除いた残り = 生成カード
+  const generated = [];
+  const pool = startIds.slice();
+  for (const inst of draft.deck){
+    const i = pool.indexOf(inst.id);
+    if (i >= 0) pool.splice(i, 1); else generated.push(inst);
+  }
+
+  const s = el('div', 'mr-screen');
+  const head = el('div');
+  head.appendChild(el('h2', 'mr-title', 'デッキ確認'));
+  head.appendChild(el('p', 'mr-sub',
+    '全' + draft.deck.length + '枚(基本' + startIds.length + ' + 生成' + generated.length + ')'
+    + ' / ' + DIFFICULTY[draft.difficulty].label));
+  s.appendChild(head);
+
+  const scroll = el('div', 'mr-scroll');
+
+  // 換算表
+  const tp = el('div', 'mr-panel');
+  const t = el('table', 'mr-table');
+  t.innerHTML = '<thead><tr><th>種目</th><th>入力</th><th>換算</th><th>カード</th><th>コア</th></tr></thead>';
+  const tb = el('tbody');
+  for (const ex of EXERCISES){
+    const raw = draft.exercise[ex.key] || 0;
+    const c = counts[ex.cat];
+    const tr = el('tr');
+    tr.innerHTML = '<td>' + ex.label + '</td>'
+      + '<td>' + raw + ex.unit + '</td>'
+      + '<td>' + c + '</td>'
+      + '<td><b>' + cardsFromCount(c) + '</b></td>'
+      + '<td><b>+' + coresGained(c, draft.difficulty) + '</b></td>';
+    tb.appendChild(tr);
+  }
+  t.appendChild(tb);
+  tp.appendChild(t);
+  tp.appendChild(el('div', 'mr-note',
+    'コアはラン終了時に獲得。<b>敗北した場合は50%没収</b>(端数切り上げ)。'));
+  scroll.appendChild(tp);
+
+  // 生成カード
+  if (generated.length){
+    scroll.appendChild(el('div', 'mr-cathead', '<span>運動で生成されたカード</span><span class="bar"></span>'));
+    for (const cat of CATEGORIES){
+      const list = generated.filter(i => CARDS[i.id].cat === cat);
+      if (!list.length) continue;
+      const h = el('div', 'mr-cathead ' + cat);
+      h.innerHTML = '<span>' + CAT_NAME[cat] + '(' + CAT_LABEL[cat] + ') ' + list.length + '枚</span><span class="bar"></span>';
+      scroll.appendChild(h);
+      scroll.appendChild(renderDeckList(list, {}));
+    }
+  } else {
+    scroll.appendChild(el('div', 'mr-panel mr-note',
+      '運動由来のカードはありません。基本デッキ8枚だけで挑みます。'
+      + '<br>1種目5回(プランクは10秒)から1枚生成されます。'));
+  }
+
+  // 初期デッキ
+  scroll.appendChild(el('div', 'mr-cathead', '<span>基本デッキ</span><span class="bar"></span>'));
+  scroll.appendChild(renderDeckList(draft.deck.filter(i => generated.indexOf(i) < 0), {}));
+
+  s.appendChild(scroll);
+
+  const foot = el('div', 'mr-sticky');
+  foot.appendChild(btn('この構成で開始', 'primary', () => { startRun(draft); go('MAP'); }));
+  foot.appendChild(btn('入力し直す', 'ghost', () => go('EXERCISE')));
+  s.appendChild(foot);
+  return s;
+}
+
+
+const RENDERERS = {
+  TITLE: renderTitle,
+  DIFFICULTY: renderDifficulty,
+  EXERCISE: renderExercise,
+  DECK_PREVIEW: renderDeckPreview,
+};
 
 /* --- デバッグパネル --- */
 function renderDebugPanel(){
@@ -725,7 +1112,10 @@ function boot(){
 boot();
 
 /* 開発用にグローバル公開(デバッグコンソールから触れるように) */
-window.MROG = { G, CARDS, ENEMIES, RELICS, DIFFICULTY, NODE_WEIGHTS, saveGame, loadGame, resetSave, go, render };
+window.MROG = { G, CARDS, CARD_LIST, ENEMIES, RELICS, DIFFICULTY, NODE_WEIGHTS,
+  saveGame, loadGame, resetSave, go, render, effectiveCard,
+  normalizeExercise, toCount, cardsFromCount, coresFromCount, coresGained,
+  rollRarity, rollCardOf, buildDeck, startRun, newDraft };
 </script>
 </body>
 </html>
