@@ -178,6 +178,14 @@ body{
 .estat .evade{color:#8fe0b6} .estat .counter{color:#d6a0f0}
 .estat .power{color:var(--pwr);border-color:#3b6d96}
 
+.mr-enemy.dead{animation:mrDie .34s ease forwards;pointer-events:none}
+@keyframes mrDie{
+  0%{opacity:1}
+  100%{opacity:0;transform:scale(.86) translateY(8px)}
+}
+.mr-enemy.enraged{border-color:#e2574c;box-shadow:0 0 14px rgba(226,87,76,.3)}
+.mr-enemy.enraged .ename{color:#ff9a90}
+.mr-bar .phasemark{position:absolute;top:0;bottom:0;width:2px;background:rgba(255,255,255,.55);transform:translateX(-1px)}
 .mr-pstat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px}
 .mr-log{
   background:#10131a;border:1px solid var(--line);border-radius:8px;padding:7px 9px;
@@ -555,6 +563,41 @@ const NODE_WEIGHTS = {
            {v:'SHOP',w:7},{v:'ELITE',w:13},{v:'TREASURE',w:4}]
 };
 
+/* --- エンカウント編成(Row が進むほど強くなる) --- */
+const ENCOUNTERS = {
+  COMBAT_EARLY: [
+    ['slime_fake'],
+    ['spike_rat','spike_rat'],
+    ['bat_swarm'],
+  ],
+  COMBAT_MID: [
+    ['slime_fake','spike_rat'],
+    ['wander_golem'],
+    ['shadow_scout'],
+    ['bat_swarm','spike_rat'],
+  ],
+  COMBAT_LATE: [
+    ['wander_golem','slime_fake'],
+    ['shadow_scout','shadow_scout'],
+    ['slime_fake','slime_fake','spike_rat'],
+  ],
+  ELITE: [
+    ['elite_heavy_soldier'],
+    ['elite_twin_shadow_a','elite_twin_shadow_b'],
+  ],
+  BOSS: [
+    ['boss_overload_warden'],
+    ['boss_sloth_colossus'],
+  ],
+};
+
+/** 同じ編成が2回続かないように選ぶ */
+function pickEncounter(poolKey, lastKey){
+  const pool = ENCOUNTERS[poolKey];
+  const avail = pool.length > 1 ? pool.filter(g => g.join(',') !== lastKey) : pool;
+  return pick(avail).slice();
+}
+
 /* --- 初期デッキ --- */
 const STARTING_DECK = [
   'atk_punch','atk_punch','atk_punch',
@@ -769,6 +812,14 @@ function makeEnemy(id, idx){
   };
 }
 
+const DEATH_ANIM_MS = 340;
+let _renderTimer = null;
+/** 死亡アニメの終了後などに、まとめて再描画する */
+function scheduleRender(delay){
+  if (_renderTimer) clearTimeout(_renderTimer);
+  _renderTimer = setTimeout(() => { _renderTimer = null; if (G.battle) render(); }, delay);
+}
+
 function log(msg){
   if (!msg) return;
   B.log.push(msg);
@@ -822,7 +873,15 @@ function startPlayerTurn(){
   B.attacksPlayedThisTurn = 0;
 
   drawCard(Math.max(0, 5 - B.hand.length));
-  for (const e of B.enemies) if (e.alive) e.intent = decideIntent(e);
+  // 敵の意図を決める。ターン経過で強化される敵(怠惰の巨像)はここで先に加算し、
+  // 表示される Intent と実際の被ダメージが必ず一致するようにする
+  for (const e of B.enemies){
+    if (!e.alive) continue;
+    const def = ENEMIES[e.id];
+    if (def.onTurnStart) log(def.onTurnStart(e));
+    syncPhase(e);
+    e.intent = decideIntent(e);
+  }
   // TODO(Phase 7): fireRelicHook('onTurnStart')
 }
 
@@ -877,8 +936,12 @@ function dealDamageToEnemy(enemy, amount, opts){
   if (enemy.hp <= 0){
     enemy.hp = 0;
     enemy.alive = false;
+    enemy.diedAt = Date.now();
     log(enemy.name + 'を倒した!');
     onEnemyDeath(enemy);
+    scheduleRender(DEATH_ANIM_MS + 60);
+  } else {
+    syncPhase(enemy);
   }
   return dealt;
 }
@@ -1175,10 +1238,8 @@ function runEnemyTurn(){
 }
 
 function actEnemy(e){
-  const def = ENEMIES[e.id];
   e.block = 0;                                  // 敵のブロックは自ターン開始時に消える
-  if (def.onTurnStart) log(def.onTurnStart(e));
-
+  syncPhase(e);
   const act = e.intent || decideIntent(e);
   const d = DIFFICULTY[G.run.difficulty];
 
@@ -1235,17 +1296,52 @@ function finishEnemyTurn(){
   render();
 }
 
-/* --- 敵AI(Phase 2 は固定ループのみ。Phase 4 でフェーズ/重み抽選に拡張) --- */
+/* --- 敵AI --- */
+
+/** hpThreshold は数値、または難易度パラメータ名('bossPhase2') */
+function phaseThreshold(ph){
+  if (typeof ph.hpThreshold === 'number') return ph.hpThreshold;
+  return DIFFICULTY[G.run.difficulty][ph.hpThreshold];
+}
+
+/** HP割合から現在のフェーズ番号を求める(phases は閾値の降順) */
+function phaseIndexFor(e){
+  const def = ENEMIES[e.id];
+  const ratio = e.maxHp > 0 ? e.hp / e.maxHp : 0;
+  let idx = 0;
+  for (let i = 0; i < def.phases.length; i++){
+    if (ratio <= phaseThreshold(def.phases[i])) idx = i;
+  }
+  return idx;
+}
+
+/** フェーズ切替を検出して onEnter を発火する */
+function syncPhase(e){
+  if (!e.alive) return false;
+  const next = phaseIndexFor(e);
+  // フェーズは一方向。自己回復でHPが戻っても前の(弱い)フェーズには戻さない
+  if (next <= e.phaseIdx) return false;
+  e.phaseIdx = next;
+  e.patternIdx = 0;
+  const ph = ENEMIES[e.id].phases[next];
+  if (ph.onEnter) log(ph.onEnter(e));
+  e.intent = decideIntent(e);
+  return true;
+}
+
 function currentPhase(e){
   const def = ENEMIES[e.id];
   return def.phases[e.phaseIdx] || def.phases[0];
 }
+
 function decideIntent(e){
   const ph = currentPhase(e);
+  if (ph.weighted) return weightedPick(ph.pattern);
   return ph.pattern[e.patternIdx % ph.pattern.length];
 }
+
 function advancePattern(e){
-  e.patternIdx++;
+  if (!currentPhase(e).weighted) e.patternIdx++;
   if (e.alive) e.intent = decideIntent(e);
 }
 
@@ -1370,7 +1466,7 @@ function renderTitle(){
 
   s.appendChild(el('div', 'mr-spacer'));
   const foot = el('div', 'mr-note mr-center');
-  foot.innerHTML = 'Phase 3 — 全37枚のカード効果<br>'
+  foot.innerHTML = 'Phase 4 — 敵AI・エリート・ボス<br>'
     + 'カード ' + Object.keys(CARDS).length + '種 / 敵 ' + Object.keys(ENEMIES).length + '種 / レリック '
     + Object.keys(RELICS).length + '種';
   s.appendChild(foot);
@@ -1630,7 +1726,11 @@ function renderBattle(){
 
   /* 敵 */
   const et = el('div', 'mr-enemies');
-  B.enemies.forEach((e, idx) => { if (e.alive) et.appendChild(renderEnemy(e, idx)); });
+  const now = Date.now();
+  B.enemies.forEach((e, idx) => {
+    if (e.alive) et.appendChild(renderEnemy(e, idx));
+    else if (e.diedAt && now - e.diedAt < DEATH_ANIM_MS) et.appendChild(renderEnemy(e, idx));
+  });
   s.appendChild(et);
 
   /* プレイヤー状態 */
@@ -1683,13 +1783,26 @@ function renderBattle(){
 }
 
 function renderEnemy(e, idx){
-  const n = el('div', 'mr-enemy' + (B.selecting != null ? ' targetable' : ''));
-  n.appendChild(el('div', 'eintent', intentText(e)));
-  n.appendChild(el('div', 'ename', e.name));
+  const selectable = e.alive && B.selecting != null;
+  const n = el('div', 'mr-enemy'
+    + (selectable ? ' targetable' : '')
+    + (e.alive ? '' : ' dead')
+    + (e.enraged ? ' enraged' : ''));
+  n.appendChild(el('div', 'eintent', e.alive ? intentText(e) : ''));
+  n.appendChild(el('div', 'ename', e.name + (e.tier === 'BOSS' ? ' ' + phaseLabel(e) : '')));
   const bar = el('div', 'mr-bar');
   const fill = el('div', 'fill');
   fill.style.width = Math.max(0, (e.hp / e.maxHp) * 100) + '%';
   bar.appendChild(fill);
+  // ボスはフェーズ切替の閾値をバー上に表示する
+  const def = ENEMIES[e.id];
+  if (def.phases.length > 1){
+    for (let i = 1; i < def.phases.length; i++){
+      const mark = el('span', 'phasemark');
+      mark.style.left = (phaseThreshold(def.phases[i]) * 100) + '%';
+      bar.appendChild(mark);
+    }
+  }
   bar.appendChild(el('span', 'barlabel', e.hp + ' / ' + e.maxHp));
   n.appendChild(bar);
   const row = el('div', 'estat');
@@ -1699,25 +1812,38 @@ function renderEnemy(e, idx){
       STATUS_ICON[k] + e.status[k]));
   }
   n.appendChild(row);
-  if (B.selecting != null){
+  if (selectable){
     n.addEventListener('click', () => playCard(B.selecting, idx));
   }
   return n;
+}
+
+function phaseLabel(e){
+  const n = ENEMIES[e.id].phases.length;
+  return n > 1 ? '(第' + (e.phaseIdx + 1) + '段階)' : '';
 }
 
 function intentText(e){
   const act = e.intent;
   if (!act) return '';
   const d = DIFFICULTY[G.run.difficulty];
+  const parts = [];
   if (act.intent === 'attack'){
     const dmg = calcDamage(Math.floor(act.value * d.enemyDmgMult), e, playerActor(), {});
-    return INTENT_ICON.attack + ' ' + dmg + (act.times > 1 ? '×' + act.times : '');
+    parts.push(INTENT_ICON.attack + ' ' + dmg + (act.times > 1 ? '×' + act.times : ''));
+  } else if (act.intent === 'block'){
+    parts.push(INTENT_ICON.block + ' ' + act.value);
+  } else if (act.intent === 'heal'){
+    parts.push(INTENT_ICON.heal + ' ' + act.value);
+  } else if (act.intent === 'buff'){
+    parts.push(INTENT_ICON.buff + (act.value ? ' ' + act.value : ''));
+  } else if (act.intent === 'debuff'){
+    parts.push(INTENT_ICON.debuff);
   }
-  if (act.intent === 'block') return INTENT_ICON.block + ' ' + act.value;
-  if (act.intent === 'heal')  return INTENT_ICON.heal  + ' ' + act.value;
-  if (act.intent === 'buff')  return INTENT_ICON.buff;
-  if (act.intent === 'debuff')return INTENT_ICON.debuff;
-  return '';
+  if (act.strength) parts.push(INTENT_ICON.buff);
+  if (act.heal && act.intent !== 'heal') parts.push(INTENT_ICON.heal + ' ' + act.heal);
+  if (act.status && act.intent !== 'debuff') parts.push(INTENT_ICON.debuff);
+  return parts.join(' ');
 }
 
 function renderPlayerStatus(){
@@ -1810,8 +1936,14 @@ function renderMapTemp(){
   ph.appendChild(el('div', 'mr-title', 'マップ'));
   ph.appendChild(el('div', 'mr-sub', 'Phase 5 で実装'));
   s.appendChild(ph);
-  s.appendChild(btn('テスト戦闘(スライムモドキ)', 'primary', () => startBattle(['slime_fake'])));
-  s.appendChild(btn('テスト戦闘(スライム×2)', '', () => startBattle(['slime_fake','slime_fake'])));
+  const groups = [
+    ['通常(前半)', 'COMBAT_EARLY'], ['通常(中盤)', 'COMBAT_MID'],
+    ['通常(終盤)', 'COMBAT_LATE'], ['エリート', 'ELITE'], ['ボス', 'BOSS'],
+  ];
+  for (const [label, key] of groups){
+    s.appendChild(btn('テスト戦闘: ' + label, key === 'COMBAT_EARLY' ? 'primary' : '',
+      () => startBattle(pickEncounter(key, null))));
+  }
   s.appendChild(btn('タイトルへ戻る', 'ghost', () => go('TITLE')));
   return [renderHud(), s];
 }
@@ -1909,6 +2041,7 @@ window.MROG = { G, CARDS, CARD_LIST, ENEMIES, RELICS, DIFFICULTY, NODE_WEIGHTS,
   rollRarity, rollCardOf, buildDeck, startRun, newDraft,
   startBattle, playCard, endPlayerTurn, drawCard, calcDamage, gainBlock,
   cardDisplayText, effectText, resolveEffect, decideIntent, checkBattleEnd,
+  ENCOUNTERS, pickEncounter, syncPhase, phaseIndexFor, phaseThreshold, intentText,
   get battle(){ return G.battle; } };
 </script>
 </body>
